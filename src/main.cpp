@@ -210,14 +210,18 @@ int main() {
            std::vector<double> next_wp2 = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
            std::vector<double> next_wp3 = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
 
+           double next_wp0_s = 0;
            std::vector<double> next_wp0;
            if (next_map_wp_id > 0){
-               next_wp0 = {map_waypoints_x[(next_map_wp_id-1)], map_waypoints_y[(next_map_wp_id-1)]};
+               int pre_id = next_map_wp_id-1;
+               next_wp0_s = map_waypoints_s[ next_map_wp_id-1];
+               next_wp0 = {map_waypoints_x[pre_id], map_waypoints_y[pre_id]};
            }else{
                std::vector<double> _dir(2);
                _dir[0] = next_wp2[0] - next_wp1[0];
                _dir[1] = next_wp2[1] - next_wp1[1];
                next_wp0 = {next_wp1[0] - 0.1*_dir[0], next_wp1[1] - 0.1*_dir[1]};
+               next_wp0_s = map_waypoints_s[ next_map_wp_id] - distance(next_wp1[0], next_wp1[1], next_wp0[0], next_wp0[1]);
            }
 
            // Four points list
@@ -233,9 +237,14 @@ int main() {
            ptsy.push_back(next_wp3[1]);
 
            // Now we use the parametric equations: x = sx(u), y = sy(u), where u value is represented in meter
-           ptsu.push_back(0.0);
-           for (size_t i=1; i < ptsx.size(); ++i){
-               ptsu.push_back( ptsu[i-1] + distance(ptsx[i], ptsy[i], ptsx[i-1], ptsy[i-1]) );
+           // ptsu.push_back(0.0);
+           // for (size_t i=1; i < ptsx.size(); ++i){
+           //     ptsu.push_back( ptsu[i-1] + distance(ptsx[i], ptsy[i], ptsx[i-1], ptsy[i-1]) );
+           // }
+
+           ptsu.push_back(next_wp0_s);
+           for (size_t i=1 ; i < ptsx.size(); ++i){
+               ptsu.push_back( map_waypoints_s[next_map_wp_id+i-1]);
            }
 
            // Create splines
@@ -250,9 +259,11 @@ int main() {
            std::vector<double> fine_maps_y;
            //
            double u_spacing = 0.5; // m
-           double current_u = 0.0; // m
+           // double current_u = 0.0; // m
+           double current_u = ptsu[0]; // m
            while (current_u < ptsu[ptsu.size()-1]){
-               fine_maps_s.push_back( (current_u -  ptsu[1]) + ref_s);
+               // fine_maps_s.push_back( (current_u -  ptsu[1]) + ref_s);
+               fine_maps_s.push_back( current_u);
                fine_maps_x.push_back(sx(current_u));
                fine_maps_y.push_back(sy(current_u));
                current_u += u_spacing;
