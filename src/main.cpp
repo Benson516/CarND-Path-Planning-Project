@@ -192,15 +192,15 @@ int main() {
            double ref_y = car_y;
            double ref_yaw = deg2rad(car_yaw);
 
-           if (prev_size >= 2){
-               // Redefine reference state as previous path end point
-               ref_s = end_path_s;
-               ref_x = previous_path_x[prev_size-1];
-               ref_y = previous_path_y[prev_size-1];
-               double ref_x_pre = previous_path_x[prev_size-2];
-               double ref_y_pre = previous_path_y[prev_size-2];
-               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-           }
+           // if (prev_size >= 2){
+           //     // Redefine reference state as previous path end point
+           //     ref_s = end_path_s;
+           //     ref_x = previous_path_x[prev_size-1];
+           //     ref_y = previous_path_y[prev_size-1];
+           //     double ref_x_pre = previous_path_x[prev_size-2];
+           //     double ref_y_pre = previous_path_y[prev_size-2];
+           //     ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+           // }
 
            // Add four evenly spaced points (in Frenet) ahead of starting point
            int next_map_wp_id = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y);
@@ -262,6 +262,10 @@ int main() {
 
            // After this, we can use fine map waypoints for applying to getXY()
 
+
+           // NOTE: The current version of getXY() will produce non-monotonic way-points
+           //       if the d is large and the road is turning right,
+           //       which will lead to failure of the conversion
 
            // // Push the previous_path into next vals
            // for (size_t i=0; i < previous_path_x.size(); ++i){
