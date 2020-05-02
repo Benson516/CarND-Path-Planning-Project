@@ -182,28 +182,14 @@ int main() {
            // Generate spline
            //----------------------------------------//
            // ptsx and ptsy are anchore points for apline
-           std::vector<double> ptsu;
+           std::vector<double> ptss;
            std::vector<double> ptsx;
            std::vector<double> ptsy;
 
-           // Reference x, y, yaw states
-           double ref_s = car_s;
-           double ref_x = car_x;
-           double ref_y = car_y;
-           double ref_yaw = deg2rad(car_yaw);
 
-           // if (prev_size >= 2){
-           //     // Redefine reference state as previous path end point
-           //     ref_s = end_path_s;
-           //     ref_x = previous_path_x[prev_size-1];
-           //     ref_y = previous_path_y[prev_size-1];
-           //     double ref_x_pre = previous_path_x[prev_size-2];
-           //     double ref_y_pre = previous_path_y[prev_size-2];
-           //     ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-           // }
 
            // Add four evenly spaced points (in Frenet) ahead of starting point
-           int next_map_wp_id = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y);
+           int next_map_wp_id = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
            std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
            // Method: Directly use map points, which are exactly at the center of lane
            std::vector<double> next_wp1 = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
@@ -236,73 +222,82 @@ int main() {
            ptsy.push_back(next_wp2[1]);
            ptsy.push_back(next_wp3[1]);
 
-           // Now we use the parametric equations: x = sx(u), y = sy(u), where u value is represented in meter
-           // ptsu.push_back(0.0);
-           // for (size_t i=1; i < ptsx.size(); ++i){
-           //     ptsu.push_back( ptsu[i-1] + distance(ptsx[i], ptsy[i], ptsx[i-1], ptsy[i-1]) );
-           // }
-
-           ptsu.push_back(next_wp0_s);
+           // Now we use the parametric equations: x = sx(s), y = sy(s), where s value is represented in meter
+           ptss.push_back(next_wp0_s);
            for (size_t i=1 ; i < ptsx.size(); ++i){
-               ptsu.push_back( map_waypoints_s[next_map_wp_id+i-1]);
+               ptss.push_back( map_waypoints_s[next_map_wp_id+i-1]);
            }
 
            // Create splines
            tk::spline sx,sy;
            // Insert anchor points
-           sx.set_points(ptsu, ptsx);
-           sy.set_points(ptsu, ptsy);
+           sx.set_points(ptss, ptsx);
+           sy.set_points(ptss, ptsy);
 
            // Generate fine map points which separate 0.5m
-           std::vector<double> fine_maps_s; // Note: s = (u - ptsu[1]) + ref_s
+           std::vector<double> fine_maps_s;
            std::vector<double> fine_maps_x;
            std::vector<double> fine_maps_y;
            //
-           double u_spacing = 0.5; // m
-           // double current_u = 0.0; // m
-           double current_u = ptsu[0]; // m
-           while (current_u < ptsu[ptsu.size()-1]){
-               // fine_maps_s.push_back( (current_u -  ptsu[1]) + ref_s);
-               fine_maps_s.push_back( current_u);
-               fine_maps_x.push_back(sx(current_u));
-               fine_maps_y.push_back(sy(current_u));
-               current_u += u_spacing;
+           double s_spacing = 0.5; // m
+           // double current_s = 0.0; // m
+           double current_s = ptss[0]; // m
+           while (current_s < ptss[ptss.size()-1]){
+               fine_maps_s.push_back( current_s);
+               fine_maps_x.push_back(sx(current_s));
+               fine_maps_y.push_back(sy(current_s));
+               current_s += s_spacing;
            }
            std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
            //
 
            // After this, we can use fine map waypoints for applying to getXY()
-
-
            // NOTE: The current version of getXY() will produce non-monotonic way-points
            //       if the d is large and the road is turning right,
            //       which will lead to failure of the conversion
 
-           // // Push the previous_path into next vals
-           // for (size_t i=0; i < previous_path_x.size(); ++i){
-           //     next_x_vals.push_back(previous_path_x[i]);
-           //     next_y_vals.push_back(previous_path_y[i]);
-           // }
+
+           // Reference x, y, yaw states
+           double ref_s = car_s;
+           double ref_x = car_x;
+           double ref_y = car_y;
+           double ref_yaw = deg2rad(car_yaw);
+
+           if (prev_size >= 2){
+               // Redefine reference state as previous path end point
+               ref_s = end_path_s;
+               ref_x = previous_path_x[prev_size-1];
+               ref_y = previous_path_y[prev_size-1];
+               double ref_x_pre = previous_path_x[prev_size-2];
+               double ref_y_pre = previous_path_y[prev_size-2];
+               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+           }
+
+           // Push the previous_path into next vals
+           for (size_t i=0; i < previous_path_x.size(); ++i){
+               next_x_vals.push_back(previous_path_x[i]);
+               next_y_vals.push_back(previous_path_y[i]);
+           }
 
            // Constant speed path with fine curve
            //----------------------------//
             double dist_inc = T_sample*ref_vel_mph*mph2mps; // 0.5
-            // std::cout << "dist_inc = " << dist_inc << std::endl;
-            for (int i = 0; i < 50; ++i) {
-               double next_s = car_s + (i+1) * dist_inc;
-               double next_d = lane_to_d(lane, lane_width);
-               std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
-               next_x_vals.push_back(xy[0]);
-               next_y_vals.push_back(xy[1]);
-           }
-          //  for (int i = 0; i < (50-previous_path_x.size()); ++i) {
-          //     // double next_s = car_s + (i+1) * dist_inc;
-          //     double next_s = ref_s + (i+1) * dist_inc;
-          //     double next_d = lane_to_d(lane, lane_width);
-          //     std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
-          //     next_x_vals.push_back(xy[0]);
-          //     next_y_vals.push_back(xy[1]);
-          // }
+           //  // std::cout << "dist_inc = " << dist_inc << std::endl;
+           //  for (int i = 0; i < 50; ++i) {
+           //     double next_s = car_s + (i+1) * dist_inc;
+           //     double next_d = lane_to_d(lane, lane_width);
+           //     std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+           //     next_x_vals.push_back(xy[0]);
+           //     next_y_vals.push_back(xy[1]);
+           // }
+           for (int i = 0; i < (50-previous_path_x.size()); ++i) {
+              // double next_s = car_s + (i+1) * dist_inc;
+              double next_s = ref_s + (i+1) * dist_inc;
+              double next_d = lane_to_d(lane, lane_width);
+              std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+              next_x_vals.push_back(xy[0]);
+              next_y_vals.push_back(xy[1]);
+          }
            //----------------------------//
 
            //----------------------------------------//
