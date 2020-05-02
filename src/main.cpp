@@ -212,12 +212,12 @@ int main() {
 
            std::vector<double> next_wp0;
            if (next_map_wp_id > 0){
-               next_wp0 = {map_waypoints_x[(next_map_wp_id-1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id-1)%map_waypoints_x.size()]};
+               next_wp0 = {map_waypoints_x[(next_map_wp_id-1)], map_waypoints_y[(next_map_wp_id-1)]};
            }else{
-               vector<double> _dir(2);
+               std::vector<double> _dir(2);
                _dir[0] = next_wp2[0] - next_wp1[0];
                _dir[1] = next_wp2[1] - next_wp1[1];
-               next_wp0 = {next_wp1[0] - _dir[0], next_wp1[1] - _dir[1]};
+               next_wp0 = {next_wp1[0] - 0.1*_dir[0], next_wp1[1] - 0.1*_dir[1]};
            }
 
            // Four points list
@@ -245,40 +245,49 @@ int main() {
            sy.set_points(ptsu, ptsy);
 
            // Generate fine map points which separate 0.5m
-           std::vector<double> fine_maps_s; // Note: s = u + ref_s
+           std::vector<double> fine_maps_s; // Note: s = (u - ptsu[1]) + ref_s
            std::vector<double> fine_maps_x;
            std::vector<double> fine_maps_y;
            //
            double u_spacing = 0.5; // m
            double current_u = 0.0; // m
            while (current_u < ptsu[ptsu.size()-1]){
-               fine_maps_s.push_back(current_u + ref_s);
+               fine_maps_s.push_back( (current_u -  ptsu[1]) + ref_s);
                fine_maps_x.push_back(sx(current_u));
                fine_maps_y.push_back(sy(current_u));
                current_u += u_spacing;
            }
+           std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
            //
 
            // After this, we can use fine map waypoints for applying to getXY()
 
 
-           // Push the previous_path into next vals
-           for (size_t i=0; i < previous_path_x.size(); ++i){
-               next_x_vals.push_back(previous_path_x[i]);
-               next_y_vals.push_back(previous_path_y[i]);
-           }
+           // // Push the previous_path into next vals
+           // for (size_t i=0; i < previous_path_x.size(); ++i){
+           //     next_x_vals.push_back(previous_path_x[i]);
+           //     next_y_vals.push_back(previous_path_y[i]);
+           // }
 
            // Constant speed path with fine curve
            //----------------------------//
             double dist_inc = T_sample*ref_vel_mph*mph2mps; // 0.5
-            for (int i = 0; i < (50-previous_path_x.size()); ++i) {
-               // double next_s = car_s + (i+1) * dist_inc;
-               double next_s = ref_s + (i+1) * dist_inc;
+            // std::cout << "dist_inc = " << dist_inc << std::endl;
+            for (int i = 0; i < 50; ++i) {
+               double next_s = car_s + (i+1) * dist_inc;
                double next_d = lane_to_d(lane, lane_width);
-               vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+               std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
                next_x_vals.push_back(xy[0]);
                next_y_vals.push_back(xy[1]);
            }
+          //  for (int i = 0; i < (50-previous_path_x.size()); ++i) {
+          //     // double next_s = car_s + (i+1) * dist_inc;
+          //     double next_s = ref_s + (i+1) * dist_inc;
+          //     double next_d = lane_to_d(lane, lane_width);
+          //     std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+          //     next_x_vals.push_back(xy[0]);
+          //     next_y_vals.push_back(xy[1]);
+          // }
            //----------------------------//
 
            //----------------------------------------//
