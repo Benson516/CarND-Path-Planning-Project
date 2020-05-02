@@ -178,56 +178,77 @@ int main() {
            // //----------------------------------------//
 
 
+           // Reference x, y, yaw states
+           //---------------------------------//
+           double ref_s = car_s;
+           double ref_x = car_x;
+           double ref_y = car_y;
+           double ref_yaw = deg2rad(car_yaw);
+           //
+           if (prev_size >= 2){
+               // Redefine reference state as previous path end point
+               ref_s = end_path_s;
+               ref_x = previous_path_x[prev_size-1];
+               ref_y = previous_path_y[prev_size-1];
+               double ref_x_pre = previous_path_x[prev_size-2];
+               double ref_y_pre = previous_path_y[prev_size-2];
+               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+           }
+           //---------------------------------//
+
 
            // Generate spline
            //----------------------------------------//
-           // ptsx and ptsy are anchore points for apline
+           // ptsx and ptsy are anchor points for apline
            std::vector<double> ptss;
            std::vector<double> ptsx;
            std::vector<double> ptsy;
 
-
-
            // Add four evenly spaced points (in Frenet) ahead of starting point
            int next_map_wp_id = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
            std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
-           // Method: Directly use map points, which are exactly at the center of lane
-           std::vector<double> next_wp1 = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
-           std::vector<double> next_wp2 = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
-           std::vector<double> next_wp3 = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
 
+           // Method: Directly use map points, which are exactly at the center of lane
+           std::vector< std::vector<double>> next_wps(4);
+           next_wps[1] = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
+           next_wps[2] = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
+           next_wps[3] = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
+
+           // Calculate the next_wps[0]
            double next_wp0_s = 0;
-           std::vector<double> next_wp0;
            if (next_map_wp_id > 0){
                int pre_id = next_map_wp_id-1;
                next_wp0_s = map_waypoints_s[ next_map_wp_id-1];
                next_wp0 = {map_waypoints_x[pre_id], map_waypoints_y[pre_id]};
            }else{
                std::vector<double> _dir(2);
-               _dir[0] = next_wp2[0] - next_wp1[0];
-               _dir[1] = next_wp2[1] - next_wp1[1];
-               next_wp0 = {next_wp1[0] - 0.1*_dir[0], next_wp1[1] - 0.1*_dir[1]};
-               next_wp0_s = map_waypoints_s[ next_map_wp_id] - distance(next_wp1[0], next_wp1[1], next_wp0[0], next_wp0[1]);
+               _dir[0] = next_wps[2][0] - next_wps[1][0];
+               _dir[1] = next_wps[2][1] - next_wps[1][1];
+               next_wps[0] = {next_wp1[0] - 0.1*_dir[0], next_wp1[1] - 0.1*_dir[1]};
+               next_wp0_s = map_waypoints_s[ next_map_wp_id] - distance(next_wps[1][0], next_wps[1][1], next_wps[0][0], next_wps[0][1]);
            }
 
-           // Four points list
-           // x
-           ptsx.push_back(next_wp0[0]);
-           ptsx.push_back(next_wp1[0]);
-           ptsx.push_back(next_wp2[0]);
-           ptsx.push_back(next_wp3[0]);
-           // y
-           ptsy.push_back(next_wp0[1]);
-           ptsy.push_back(next_wp1[1]);
-           ptsy.push_back(next_wp2[1]);
-           ptsy.push_back(next_wp3[1]);
+           // Anchor points list
+           double predict_next_wp_s = next_wp0_s;
+           bool is_ref_inserted = false;
+           for (size_t i=0; i < next_wps.size(); ++i){
+               //
+               if ( predict_next_wp_s > ref_s && !is_ref_inserted){
+                   ptss.push_back(ref_s);
+                   ptsx.push_back(ref_x);
+                   ptsy.push_back(ref_y);
+                   is_ref_inserted = true;
+               }
+               //
+               ptss.push_back(predict_next_wp_s);
+               ptsx.push_back(next_wp[i][0]);
+               ptsy.push_back(next_wp[i][1]);
+               //
+               predict_next_wp_s = map_waypoints_s[(next_map_wp_id+i)%map_waypoints_s.size()];
+           }
+
 
            // Now we use the parametric equations: x = sx(s), y = sy(s), where s value is represented in meter
-           ptss.push_back(next_wp0_s);
-           for (size_t i=1 ; i < ptsx.size(); ++i){
-               ptss.push_back( map_waypoints_s[next_map_wp_id+i-1]);
-           }
-
            // Create splines
            tk::spline sx,sy;
            // Insert anchor points
@@ -257,21 +278,7 @@ int main() {
            //       which will lead to failure of the conversion
 
 
-           // Reference x, y, yaw states
-           double ref_s = car_s;
-           double ref_x = car_x;
-           double ref_y = car_y;
-           double ref_yaw = deg2rad(car_yaw);
 
-           if (prev_size >= 2){
-               // Redefine reference state as previous path end point
-               ref_s = end_path_s;
-               ref_x = previous_path_x[prev_size-1];
-               ref_y = previous_path_y[prev_size-1];
-               double ref_x_pre = previous_path_x[prev_size-2];
-               double ref_y_pre = previous_path_y[prev_size-2];
-               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-           }
 
            // Push the previous_path into next vals
            for (size_t i=0; i < previous_path_x.size(); ++i){
