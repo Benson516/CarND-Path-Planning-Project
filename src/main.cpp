@@ -219,32 +219,30 @@ int main() {
            if (next_map_wp_id > 0){
                int pre_id = next_map_wp_id-1;
                next_wp0_s = map_waypoints_s[ next_map_wp_id-1];
-               next_wp0 = {map_waypoints_x[pre_id], map_waypoints_y[pre_id]};
+               next_wps[0] = {map_waypoints_x[pre_id], map_waypoints_y[pre_id]};
            }else{
                std::vector<double> _dir(2);
                _dir[0] = next_wps[2][0] - next_wps[1][0];
                _dir[1] = next_wps[2][1] - next_wps[1][1];
-               next_wps[0] = {next_wp1[0] - 0.1*_dir[0], next_wp1[1] - 0.1*_dir[1]};
+               next_wps[0] = {next_wps[1][0] - 0.1*_dir[0], next_wps[1][1] - 0.1*_dir[1]};
                next_wp0_s = map_waypoints_s[ next_map_wp_id] - distance(next_wps[1][0], next_wps[1][1], next_wps[0][0], next_wps[0][1]);
            }
 
            // Anchor points list
            double predict_next_wp_s = next_wp0_s;
-           bool is_ref_inserted = false;
            for (size_t i=0; i < next_wps.size(); ++i){
                //
-               if ( predict_next_wp_s > ref_s && !is_ref_inserted){
-                   ptss.push_back(ref_s);
-                   ptsx.push_back(ref_x);
-                   ptsy.push_back(ref_y);
-                   is_ref_inserted = true;
-               }
-               //
                ptss.push_back(predict_next_wp_s);
-               ptsx.push_back(next_wp[i][0]);
-               ptsy.push_back(next_wp[i][1]);
+               ptsx.push_back(next_wps[i][0]);
+               ptsy.push_back(next_wps[i][1]);
                //
                predict_next_wp_s = map_waypoints_s[(next_map_wp_id+i)%map_waypoints_s.size()];
+               // if (ref_s < predict_next_wp_s && ref_s > ptss[i]){
+               //     ptss.push_back(ref_s);
+               //     ptsx.push_back(ref_x);
+               //     ptsy.push_back(ref_y);
+               // }
+               //
            }
 
 
