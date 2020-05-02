@@ -182,76 +182,84 @@ int main() {
            // Generate spline
            //----------------------------------------//
            // ptsx and ptsy are anchore points for apline
-           vector<double> ptsx;
-           vector<double> ptsy;
+           std::vector<double> ptsu;
+           std::vector<double> ptsx;
+           std::vector<double> ptsy;
 
            // Reference x, y, yaw states
+           double ref_s = car_s;
            double ref_x = car_x;
            double ref_y = car_y;
            double ref_yaw = deg2rad(car_yaw);
 
-           if (prev_size < 2){
-               double ref_x_pre = car_x - cos(car_yaw);
-               double ref_y_pre = car_y - sin(car_yaw);
-
-               ptsx.push_back(ref_x_pre);
-               ptsx.push_back(ref_x);
-               ptsy.push_back(ref_y_pre);
-               ptsy.push_back(ref_y);
-           }else{
+           if (prev_size >= 2){
                // Redefine reference state as previous path end point
+               ref_s = end_path_s;
                ref_x = previous_path_x[prev_size-1];
                ref_y = previous_path_y[prev_size-1];
-
                double ref_x_pre = previous_path_x[prev_size-2];
                double ref_y_pre = previous_path_y[prev_size-2];
                ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-
-               ptsx.push_back(ref_x_pre);
-               ptsx.push_back(ref_x);
-               ptsy.push_back(ref_y_pre);
-               ptsy.push_back(ref_y);
            }
 
-           // Add three evenly spaced points (in Frenet) ahead of starting point
-
-           // Method 1: Use getXY() and some arbitrarilt given s-values
-           //      --> Not so soomth path and might sometime run off lane
-           // TODO: Why use car_s instead of end_path_s?
-           // double cp_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
-           // vector<double> next_wp0 = getXY(car_s+cp_space, lane_to_d(lane,lane_width), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-           // vector<double> next_wp1 = getXY(car_s+2*cp_space, lane_to_d(lane,lane_width), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-           // vector<double> next_wp2 = getXY(car_s+3*cp_space, lane_to_d(lane,lane_width), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-
-           // Method 2: Directly use map points, which are exactly at the center of lane
+           // Add four evenly spaced points (in Frenet) ahead of starting point
            int next_map_wp_id = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y);
            std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
-           vector<double> next_wp0 = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
-           vector<double> next_wp1 = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
-           vector<double> next_wp2 = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
-           //
+           // Method: Directly use map points, which are exactly at the center of lane
+           std::vector<double> next_wp1 = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
+           std::vector<double> next_wp2 = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
+           std::vector<double> next_wp3 = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
+
+           std::vector<double> next_wp0;
+           if (next_map_wp_id > 0){
+               next_wp0 = {map_waypoints_x[(next_map_wp_id-1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id-1)%map_waypoints_x.size()]};
+           }else{
+               vector<double> _dir(2);
+               _dir[0] = next_wp2[0] - next_wp1[0];
+               _dir[1] = next_wp2[1] - next_wp1[1];
+               next_wp0 = {next_wp1[0] - _dir[0], next_wp1[1] - _dir[1]};
+           }
+
+           // Four points list
+           // x
            ptsx.push_back(next_wp0[0]);
            ptsx.push_back(next_wp1[0]);
            ptsx.push_back(next_wp2[0]);
-           //
+           ptsx.push_back(next_wp3[0]);
+           // y
            ptsy.push_back(next_wp0[1]);
            ptsy.push_back(next_wp1[1]);
            ptsy.push_back(next_wp2[1]);
+           ptsy.push_back(next_wp3[1]);
 
-           // Now we have totally 5 points in ptsx and ptsy
-
-           // Change reference coordinate frame
-           for (size_t i=0; i < ptsx.size(); ++i){
-               double shift_x = ptsx[i] - ref_x;
-               double shift_y = ptsy[i] - ref_y;
-               ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
-               ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
+           // Now we use the parametric equations: x = sx(u), y = sy(u), where u value is represented in meter
+           ptsu.push_back(0.0);
+           for (size_t i=1; i < ptsx.size(); ++i){
+               ptsu.push_back( ptsu[i-1] + distance(ptsx[i], ptsy[i], ptsx[i-1], ptsy[i-1]) );
            }
 
-           // Create a spline
-           tk::spline s;
+           // Create splines
+           tk::spline sx,sy;
            // Insert anchor points
-           s.set_points(ptsx, ptsy);
+           sx.set_points(ptsu, ptsx);
+           sy.set_points(ptsu, ptsy);
+
+           // Generate fine map points which separate 0.5m
+           std::vector<double> fine_maps_s; // Note: s = u + ref_s
+           std::vector<double> fine_maps_x;
+           std::vector<double> fine_maps_y;
+           //
+           double u_spacing = 0.5; // m
+           double current_u = 0.0; // m
+           while (current_u < ptsu[ptsu.size()-1]){
+               fine_maps_s.push_back(current_u + ref_s);
+               fine_maps_x.push_back(sx(current_u));
+               fine_maps_y.push_back(sy(current_u));
+               current_u += u_spacing;
+           }
+           //
+
+           // After this, we can use fine map waypoints for applying to getXY()
 
 
            // Push the previous_path into next vals
@@ -260,33 +268,19 @@ int main() {
                next_y_vals.push_back(previous_path_y[i]);
            }
 
-           // Caluculate how to sample the spline point for required velocity
-           double target_x = 30.0;
-           double target_y = s(target_x);
-           double target_dist = sqrt( target_x*target_x + target_y*target_y);
-
-           double x_add_on = 0;
-
-
-           // Fill up the rest of the path after filling up with previous path points.
-           // Here we always output 50 points
-           for (size_t i=1; i <= (50-previous_path_x.size()); ++i){
-               double N = target_dist/(T_sample*ref_vel_mph*mph2mps);
-               double x_local = x_add_on + target_x/N;
-               double y_local = s(x_local);
-               x_add_on = x_local;
-
-               // Coordinate transformation, from local frame to global frame
-               double x_point = x_local * cos(ref_yaw) - y_local * sin(ref_yaw);
-               double y_point = x_local * sin(ref_yaw) + y_local * cos(ref_yaw);
-               // Translation
-               x_point += ref_x;
-               y_point += ref_y;
-
-               // Add point to path
-               next_x_vals.push_back( x_point );
-               next_y_vals.push_back( y_point );
+           // Constant speed path with fine curve
+           //----------------------------//
+            double dist_inc = T_sample*ref_vel_mph*mph2mps; // 0.5
+            for (int i = 0; i < (50-previous_path_x.size()); ++i) {
+               // double next_s = car_s + (i+1) * dist_inc;
+               double next_s = ref_s + (i+1) * dist_inc;
+               double next_d = lane_to_d(lane, lane_width);
+               vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+               next_x_vals.push_back(xy[0]);
+               next_y_vals.push_back(xy[1]);
            }
+           //----------------------------//
+
            //----------------------------------------//
 
 
