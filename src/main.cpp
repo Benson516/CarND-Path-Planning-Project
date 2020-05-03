@@ -72,8 +72,8 @@ int main() {
   //---------------------//
   int lane = 1;
   // The reference speed
-  double ref_vel_mph = 30; // 49.5; // mph
-  // double ref_vel_mph = 200; // 49.5; // mph
+  // double ref_vel_mph = 30; // 49.5; // mph
+  double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
   // Global fine maps
@@ -255,7 +255,10 @@ int main() {
            // //
 
            // Generate local fine-map
-           get_local_fine_map(car_x, car_y, car_yaw, 0.5,
+           std::vector<double> fine_maps_s;
+           std::vector<double> fine_maps_x;
+           std::vector<double> fine_maps_y;
+           get_local_fine_map(car_x, car_y, 0.5,
                                 map_waypoints_s, map_waypoints_x, map_waypoints_y,
                                 fine_maps_s, fine_maps_x, fine_maps_y);
 
