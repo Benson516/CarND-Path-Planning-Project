@@ -209,42 +209,15 @@ int main() {
            std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
 
            // Method: Directly use map points, which are exactly at the center of lane
-           std::vector< std::vector<double>> next_wps(4);
-           next_wps[1] = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
-           next_wps[2] = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
-           next_wps[3] = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
-
-           // Calculate the next_wps[0]
-           double next_wp0_s = 0;
-           if (next_map_wp_id > 0){
-               int pre_id = next_map_wp_id-1;
-               next_wp0_s = map_waypoints_s[ next_map_wp_id-1];
-               next_wps[0] = {map_waypoints_x[pre_id], map_waypoints_y[pre_id]};
-           }else{
-               std::vector<double> _dir(2);
-               _dir[0] = next_wps[2][0] - next_wps[1][0];
-               _dir[1] = next_wps[2][1] - next_wps[1][1];
-               next_wps[0] = {next_wps[1][0] - 0.1*_dir[0], next_wps[1][1] - 0.1*_dir[1]};
-               next_wp0_s = map_waypoints_s[ next_map_wp_id] - distance(next_wps[1][0], next_wps[1][1], next_wps[0][0], next_wps[0][1]);
+           // The anchor points are: {pre-waypoint, next-waypoint, 2nd-next, 3rd-next}
+           size_t N_spline_anchor = 4;
+           for (size_t i=0; i < N_spline_anchor; ++i){
+               size_t _id = (next_map_wp_id+i-1)%map_waypoints_x.size();
+               // Anchor points list
+               ptss.push_back( map_waypoints_s[_id] );
+               ptsx.push_back( map_waypoints_x[_id] );
+               ptsy.push_back( map_waypoints_y[_id] );
            }
-
-           // Anchor points list
-           double predict_next_wp_s = next_wp0_s;
-           for (size_t i=0; i < next_wps.size(); ++i){
-               //
-               ptss.push_back(predict_next_wp_s);
-               ptsx.push_back(next_wps[i][0]);
-               ptsy.push_back(next_wps[i][1]);
-               //
-               predict_next_wp_s = map_waypoints_s[(next_map_wp_id+i)%map_waypoints_s.size()];
-               // if (ref_s < predict_next_wp_s && ref_s > ptss[i]){
-               //     ptss.push_back(ref_s);
-               //     ptsx.push_back(ref_x);
-               //     ptsy.push_back(ref_y);
-               // }
-               //
-           }
-
 
            // Now we use the parametric equations: x = sx(s), y = sy(s), where s value is represented in meter
            // Create splines
@@ -259,7 +232,6 @@ int main() {
            std::vector<double> fine_maps_y;
            //
            double s_spacing = 0.5; // m
-           // double current_s = 0.0; // m
            double current_s = ptss[0]; // m
            while (current_s < ptss[ptss.size()-1]){
                fine_maps_s.push_back( current_s);
@@ -279,7 +251,7 @@ int main() {
 
 
            // Push the previous_path into next vals
-           for (size_t i=0; i < previous_path_x.size(); ++i){
+           for (size_t i=0; i < prev_size; ++i){
                next_x_vals.push_back(previous_path_x[i]);
                next_y_vals.push_back(previous_path_y[i]);
            }
@@ -295,7 +267,7 @@ int main() {
            //     next_x_vals.push_back(xy[0]);
            //     next_y_vals.push_back(xy[1]);
            // }
-           for (int i = 0; i < (50-previous_path_x.size()); ++i) {
+           for (int i = 0; i < (50-prev_size); ++i) {
               // double next_s = car_s + (i+1) * dist_inc;
               double next_s = ref_s + (i+1) * dist_inc;
               double next_d = lane_to_d(lane, lane_width);
