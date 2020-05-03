@@ -40,7 +40,7 @@ double distance(double x1, double y1, double x2, double y2) {
 }
 
 // Calculate closest waypoint to current x, y position
-int ClosestWaypoint(double x, double y, const vector<double> &maps_x, 
+int ClosestWaypoint(double x, double y, const vector<double> &maps_x,
                     const vector<double> &maps_y) {
   double closestLen = 100000; //large number
   int closestWaypoint = 0;
@@ -59,7 +59,7 @@ int ClosestWaypoint(double x, double y, const vector<double> &maps_x,
 }
 
 // Returns next waypoint of the closest waypoint
-int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x, 
+int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x,
                  const vector<double> &maps_y) {
   int closestWaypoint = ClosestWaypoint(x,y,maps_x,maps_y);
 
@@ -82,8 +82,8 @@ int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x,
 }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-vector<double> getFrenet(double x, double y, double theta, 
-                         const vector<double> &maps_x, 
+vector<double> getFrenet(double x, double y, double theta,
+                         const vector<double> &maps_x,
                          const vector<double> &maps_y) {
   int next_wp = NextWaypoint(x,y, theta, maps_x,maps_y);
 
@@ -127,8 +127,8 @@ vector<double> getFrenet(double x, double y, double theta,
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
-vector<double> getXY(double s, double d, const vector<double> &maps_s, 
-                     const vector<double> &maps_x, 
+vector<double> getXY(double s, double d, const vector<double> &maps_s,
+                     const vector<double> &maps_x,
                      const vector<double> &maps_y) {
   int prev_wp = -1;
 
@@ -154,4 +154,56 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
+// Pre-generate fine map
+bool generate_fine_map( double s_spacing,
+                        const std::vector<double> &maps_s,
+                        const std::vector<double> &maps_x,
+                        const std::vector<double> &maps_y,
+                        std::vector<double> &fine_maps_s,
+                        std::vector<double> &fine_maps_x,
+                        std::vector<double> &fine_maps_y)
+{
+    // Initialization
+    fine_maps_s.resize(0);
+    fine_maps_x.resize(0);
+    fine_maps_y.resize(0);
+
+    // Generate spline
+    //----------------------------------------//
+    // Anchor points list for spline
+    std::vector<double> ptss = maps_s;
+    std::vector<double> ptsx = maps_x;
+    std::vector<double> ptsy = maps_y;
+
+    // Calculate the equality s-value for id:0 after going through a cycle
+    size_t eid = maps_s.size()-1;
+    double dist_end_to_zero = distance(maps_x[eid], maps_y[eid], maps_x[0], maps_y[0] );
+    double s_0 = maps_s[eid] + dist_end_to_zero;
+    // Insert the last point (id=0)
+    ptss.push_back( s_0 );
+    ptsx.push_back( maps_s[0] );
+    ptsy.push_back( maps_s[0] );
+
+
+    // Create splines
+    //--------------------------------------//
+    // These splines are parametric equations: x = sx(s), y = sy(s)
+    tk::spline sx,sy;
+    // Insert anchor points
+    sx.set_points(ptss, ptsx);
+    sy.set_points(ptss, ptsy);
+    //
+    double s_spacing = 0.5; // m
+    double current_s = ptss[0]; // m
+    while (current_s < ptss[ptss.size()-1]){
+        fine_maps_s.push_back( current_s);
+        fine_maps_x.push_back(sx(current_s));
+        fine_maps_y.push_back(sy(current_s));
+        current_s += s_spacing;
+    }
+    std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
+    //--------------------------------------//
+
+    return true;
+}
 #endif  // HELPERS_H

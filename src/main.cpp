@@ -199,7 +199,7 @@ int main() {
 
            // Generate spline
            //----------------------------------------//
-           // ptsx and ptsy are anchor points for apline
+           // ptsx and ptsy are anchor points for spline
            std::vector<double> ptss;
            std::vector<double> ptsx;
            std::vector<double> ptsy;
