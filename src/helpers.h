@@ -155,7 +155,7 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
-// Pre-generate fine map
+// Pre-generated fine map
 bool generate_fine_map( double s_spacing,
                         const std::vector<double> &maps_s,
                         const std::vector<double> &maps_x,
@@ -208,4 +208,65 @@ bool generate_fine_map( double s_spacing,
 
     return true;
 }
+
+// Local fine map
+bool get_local_fine_map( double car_x, double car_y, double car_yaw,
+                        double s_spacing,
+                        const std::vector<double> &maps_s,
+                        const std::vector<double> &maps_x,
+                        const std::vector<double> &maps_y,
+                        std::vector<double> &fine_maps_s,
+                        std::vector<double> &fine_maps_x,
+                        std::vector<double> &fine_maps_y)
+{
+    // Initialization
+    fine_maps_s.resize(0);
+    fine_maps_x.resize(0);
+    fine_maps_y.resize(0);
+
+    // Generate spline
+    //----------------------------------------//
+    // Anchor points list for spline
+    std::vector<double> ptss;
+    std::vector<double> ptsx;
+    std::vector<double> ptsy;
+
+    // Add four evenly spaced points (in Frenet) ahead of starting point
+    int next_map_wp_id = NextWaypoint(car_x, car_y, car_yaw, maps_x, maps_y);
+    std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
+
+    // Method: Directly use map points, which are exactly at the center of lane
+    // The anchor points are: {pre-waypoint, next-waypoint, 2nd-next, 3rd-next}
+    size_t N_spline_anchor = 4;
+    for (size_t i=0; i < N_spline_anchor; ++i){
+        size_t _id = (next_map_wp_id+i-1)%maps_x.size();
+        // Anchor points list
+        ptss.push_back( maps_s[_id] ); // Note: there is a bug when finish a cycle.
+        ptsx.push_back( maps_x[_id] );
+        ptsy.push_back( maps_y[_id] );
+    }
+
+    // Create splines
+    //--------------------------------------//
+    // These splines are parametric equations: x = sx(s), y = sy(s)
+    tk::spline sx,sy;
+    // Insert anchor points
+    sx.set_points(ptss, ptsx);
+    sy.set_points(ptss, ptsy);
+    //
+    // double s_spacing = 0.5; // m
+    double current_s = ptss[0]; // m
+    while (current_s < ptss[ptss.size()-1]){
+        fine_maps_s.push_back( current_s);
+        fine_maps_x.push_back(sx(current_s));
+        fine_maps_y.push_back(sy(current_s));
+        current_s += s_spacing;
+    }
+    std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
+    //--------------------------------------//
+
+    return true;
+}
+
+
 #endif  // HELPERS_H
