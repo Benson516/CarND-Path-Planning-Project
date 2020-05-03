@@ -220,9 +220,14 @@ int main() {
                                 fine_maps_s, fine_maps_x, fine_maps_y);
 
            // After this, we can use fine map waypoints for applying to getXY()
-           // NOTE: The current version of getXY() will produce non-monotonic way-points
-           //       if the d is large and the road is turning right,
-           //       which will lead to failure of the conversion
+           // NOTE: Because the Frenet-to-xy conversion will deform the space (non-isometry),
+           //       it's not appropriate to do sampling before transformation, which will
+           //       disturb the planed speed (especially when turning,
+           //       turning right will decrease the speed,
+           //       while turning left will increase the speed)
+
+
+
 
 
 
