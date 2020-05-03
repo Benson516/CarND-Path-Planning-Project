@@ -226,7 +226,7 @@ int main() {
            for (size_t i=0; i < N_spline_anchor; ++i){
                size_t _id = (next_map_wp_id+i-1)%map_waypoints_x.size();
                // Anchor points list
-               ptss.push_back( map_waypoints_s[_id] );
+               ptss.push_back( map_waypoints_s[_id] ); // Note: there is a bug when finish a cycle.
                ptsx.push_back( map_waypoints_x[_id] );
                ptsy.push_back( map_waypoints_y[_id] );
            }
