@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string>
 #include <vector>
+#include "spline.h"
 
 // for convenience
 using std::string;
@@ -193,7 +194,7 @@ bool generate_fine_map( double s_spacing,
     sx.set_points(ptss, ptsx);
     sy.set_points(ptss, ptsy);
     //
-    double s_spacing = 0.5; // m
+    // double s_spacing = 0.5; // m
     double current_s = ptss[0]; // m
     while (current_s < ptss[ptss.size()-1]){
         fine_maps_s.push_back( current_s);
