@@ -265,7 +265,7 @@ bool get_local_fine_map( double car_x, double car_y,
     int N_spline_anchor = 10; //6;
     bool is_returned = false;
     for (int i=0; i < N_spline_anchor; ++i){
-        int _id = (closest_map_wp_id+i-N_spline_anchor/2) % int(maps_s.size());
+        int _id = (closest_map_wp_id+i-2) % int(maps_s.size());
         if (_id < 0){
             _id += maps_s.size();
         }

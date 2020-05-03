@@ -72,7 +72,7 @@ int main() {
   //---------------------//
   int lane = 1;
   // The reference speed
-  // double ref_vel_mph = 30; // 49.5; // mph
+  // double ref_vel_mph = 49.5; // mph
   double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
@@ -126,6 +126,9 @@ int main() {
 
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
+          if ( prev_size > 10){
+              prev_size = 10;
+          }
 
           vector<double> next_x_vals;
           vector<double> next_y_vals;
@@ -247,18 +250,23 @@ int main() {
            // Add three evenly spaced points (in Frenet) ahead of starting point
            // Method 1: Use getXY() and some s-values ahead with fine_maps
            //           --> so that the car will not run off path
-           // Note: cp_space defines the maximum distance for lane-changing
+           // Note: target_space defines the maximum distance for lane-changing
            //-------------------//
-           double cp_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
+           double target_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
+           double p_space = 10.0; // m
            //-------------------//
-           for (size_t i=1; i <= 3; ++i){
-               vector<double> _next_wp = getXY( ref_s+i*cp_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           for (size_t i=0; i < 3; ++i){
+               double _add_on_s =  target_space + i*p_space;
+               vector<double> _next_wp = getXY( ref_s+_add_on_s, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
                ptsx.push_back(_next_wp[0]);
-               ptsx.push_back(_next_wp[1]);
+               ptsy.push_back(_next_wp[1]);
            }
-           // vector<double> next_wp0 = getXY(ref_s+cp_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
-           // vector<double> next_wp1 = getXY(ref_s+2*cp_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
-           // vector<double> next_wp2 = getXY(ref_s+3*cp_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           // Note: (important) ref_s+_add_on_s should not exceed the last s-value of fine_maps_s!!
+           //         ^^^ If the error of m[i-1] > m[i] appeared, it's this reason.
+
+           // vector<double> next_wp0 = getXY(ref_s+target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           // vector<double> next_wp1 = getXY(ref_s+2*target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           // vector<double> next_wp2 = getXY(ref_s+3*target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
            // // x
            // ptsx.push_back(next_wp0[0]);
            // ptsx.push_back(next_wp1[0]);
@@ -275,6 +283,7 @@ int main() {
                double shift_y = ptsy[i] - ref_y;
                ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
                ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
+               // std::cout << "ptsx[" << i << "] = " << ptsx[i] << std::endl;
            }
 
            // Create a spline
@@ -290,7 +299,7 @@ int main() {
            }
 
            // Caluculate how to sample the spline point for required velocity
-           double target_x = cp_space;
+           double target_x = target_space;
            double target_y = s(target_x);
            double target_dist = sqrt( target_x*target_x + target_y*target_y);
            double N_sample = target_dist/(T_sample*ref_vel_mph*mph2mps);
