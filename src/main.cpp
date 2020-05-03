@@ -33,6 +33,8 @@ int main() {
   vector<double> map_waypoints_dx;
   vector<double> map_waypoints_dy;
 
+
+
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
   // The max s value before wrapping around the track back to 0
@@ -70,12 +72,22 @@ int main() {
   //---------------------//
   int lane = 1;
   // The reference speed
-  double ref_vel_mph = 49.5; // mph
+  double ref_vel_mph = 30; // 49.5; // mph
   // double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
+  // Global fine maps
+  std::vector<double> g_fine_maps_s;
+  std::vector<double> g_fine_maps_x;
+  std::vector<double> g_fine_maps_y;
+  // generate_fine_map(0.5, map_waypoints_s, map_waypoints_x, map_waypoints_y,
+  //                       g_fine_maps_s, g_fine_maps_x, g_fine_maps_y);
+
+
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy,&T_sample,&lane_width,&lane,&ref_vel_mph]
+               &map_waypoints_dx,&map_waypoints_dy,
+               &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
+               &T_sample,&lane_width,&lane,&ref_vel_mph]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -239,7 +251,7 @@ int main() {
                fine_maps_y.push_back(sy(current_s));
                current_s += s_spacing;
            }
-           std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
+           // std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
            //
 
            // After this, we can use fine map waypoints for applying to getXY()
@@ -272,6 +284,7 @@ int main() {
               double next_s = ref_s + (i+1) * dist_inc;
               double next_d = lane_to_d(lane, lane_width);
               std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+              // std::vector<double> xy = getXY(next_s,next_d, g_fine_maps_s, g_fine_maps_x, g_fine_maps_y);
               next_x_vals.push_back(xy[0]);
               next_y_vals.push_back(xy[1]);
           }

@@ -182,8 +182,8 @@ bool generate_fine_map( double s_spacing,
     double s_0 = maps_s[eid] + dist_end_to_zero;
     // Insert the last point (id=0)
     ptss.push_back( s_0 );
-    ptsx.push_back( maps_s[0] );
-    ptsy.push_back( maps_s[0] );
+    ptsx.push_back( maps_x[0] );
+    ptsy.push_back( maps_y[0] );
 
 
     // Create splines
@@ -201,6 +201,7 @@ bool generate_fine_map( double s_spacing,
         fine_maps_x.push_back(sx(current_s));
         fine_maps_y.push_back(sy(current_s));
         current_s += s_spacing;
+        // std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
     }
     std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
     //--------------------------------------//
