@@ -211,49 +211,6 @@ int main() {
 
            // Generate spline
            //----------------------------------------//
-           // // ptsx and ptsy are anchor points for spline
-           // std::vector<double> ptss;
-           // std::vector<double> ptsx;
-           // std::vector<double> ptsy;
-           //
-           // // Add four evenly spaced points (in Frenet) ahead of starting point
-           // int next_map_wp_id = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
-           // std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
-           //
-           // // Method: Directly use map points, which are exactly at the center of lane
-           // // The anchor points are: {pre-waypoint, next-waypoint, 2nd-next, 3rd-next}
-           // size_t N_spline_anchor = 4;
-           // for (size_t i=0; i < N_spline_anchor; ++i){
-           //     size_t _id = (next_map_wp_id+i-1)%map_waypoints_x.size();
-           //     // Anchor points list
-           //     ptss.push_back( map_waypoints_s[_id] ); // Note: there is a bug when finish a cycle.
-           //     ptsx.push_back( map_waypoints_x[_id] );
-           //     ptsy.push_back( map_waypoints_y[_id] );
-           // }
-           //
-           // // Now we use the parametric equations: x = sx(s), y = sy(s), where s value is represented in meter
-           // // Create splines
-           // tk::spline sx,sy;
-           // // Insert anchor points
-           // sx.set_points(ptss, ptsx);
-           // sy.set_points(ptss, ptsy);
-           //
-           // // Generate fine map points which separate 0.5m
-           // std::vector<double> fine_maps_s;
-           // std::vector<double> fine_maps_x;
-           // std::vector<double> fine_maps_y;
-           // //
-           // double s_spacing = 0.5; // m
-           // double current_s = ptss[0]; // m
-           // while (current_s < ptss[ptss.size()-1]){
-           //     fine_maps_s.push_back( current_s);
-           //     fine_maps_x.push_back(sx(current_s));
-           //     fine_maps_y.push_back(sy(current_s));
-           //     current_s += s_spacing;
-           // }
-           // // std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
-           // //
-
            // Generate local fine-map
            std::vector<double> fine_maps_s;
            std::vector<double> fine_maps_x;
