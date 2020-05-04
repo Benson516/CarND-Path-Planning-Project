@@ -68,11 +68,11 @@ int main() {
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
   //
-  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  double ref_vel_mph = 200; // 49.5; // mph
+  //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
-  //
-  // double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
   // Variables
@@ -197,11 +197,11 @@ int main() {
                   // Prediction (simple): constant-speed, keep-lane
                   check_car_s += (double(prev_size)*T_sample) * check_speed;
 
-                  if ((check_car_s > car_s) && ((check_car_s-car_s) < 30.0)){
+                  if ((check_car_s > ref_s) && ((check_car_s - ref_s) < 30.0)){
                       // Do some logic here
 
                       // Find the true front car (minimum distance ahead)
-                      if ((check_car_s-car_s) < front_car_distance || front_car_id < 0){
+                      if ((check_car_s-ref_s) < front_car_distance || front_car_id < 0){
                           front_car_id = i;
                           front_car_distance = check_car_s-car_s;
                           front_car_speed = check_speed;
@@ -391,8 +391,6 @@ int main() {
            // double N_sample = target_dist/(T_sample*set_vel);
            // double dist_inc_x = target_x/N_sample; // 0.5
            //
-           accel_max
-           accel_min
            //
            double x_add_on = 0;
            double speed_i = end_path_speed; // The initial speed is set to the last speed of the previous path
