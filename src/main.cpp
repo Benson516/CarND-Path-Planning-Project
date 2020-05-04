@@ -195,7 +195,9 @@ int main() {
                       too_close = true;
                       // lane change to the left-most one
                       if (lane > 0){
-                          lane = 0;
+                          lane -= 1;
+                      }else if( lane == 0){
+                          lane += 1;
                       }
                   }
                   //
