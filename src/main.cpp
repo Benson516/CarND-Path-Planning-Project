@@ -67,14 +67,17 @@ int main() {
   double T_sample = 0.02; // 20 ms, sampling period
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
+  //
+  // double ref_vel_mph = 49.5; // mph
+  double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
   // Variables
   //---------------------//
   int lane = 1;
-  // The reference speed
-  // double ref_vel_mph = 49.5; // mph
-  double ref_vel_mph = 200; // 49.5; // mph
+  // The set speed
+  // double set_vel = ref_vel_mph * mph2mps; // m/s
+  double set_vel = 0.0; // m/s
   //---------------------//
 
   // Global fine maps
@@ -88,7 +91,7 @@ int main() {
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy,
                &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
-               &T_sample,&lane_width,&car_width,&lane,&ref_vel_mph]
+               &T_sample,&lane_width,&car_width,&lane,&ref_vel_mph,&set_vel]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -168,7 +171,7 @@ int main() {
           bool too_close = false;
 
           // Determin the following
-          // - Find ref_vel_mph to use
+          // - Find set_vel to use
           // - Determine if we are going to change lane
           for (size_t i=0; i < sensor_fusion.size(); ++i){
               // For each car on the road
@@ -187,14 +190,21 @@ int main() {
 
                   if ((check_car_s > car_s) && ((check_car_s-car_s) < 30.0)){
                       // Do some logic here
-                      ref_vel_mph = 29.5;
+                      // set_vel = 29.5;
                       //
+                      too_close = true;
                   }
                   //
               }
               // end Checking the collision
           }
 
+          // Manage the speed
+          if (too_close){
+              set_vel -= 10.0 * T_sample; // -10.0 m/s^2
+          }else if ( set_vel < ref_vel_mph*mph2mps){
+              set_vel += 10.0 * T_sample; // 10.0 m/s^2
+          }
 
           //---------------------------------//
 
@@ -343,7 +353,7 @@ int main() {
            double target_x = target_space;
            double target_y = s(target_x);
            double target_dist = sqrt( target_x*target_x + target_y*target_y);
-           double N_sample = target_dist/(T_sample*ref_vel_mph*mph2mps);
+           double N_sample = target_dist/(T_sample*set_vel);
            double dist_inc_x = target_x/N_sample; // 0.5
            //
            double x_add_on = 0;
@@ -364,7 +374,7 @@ int main() {
 
           //  // Constant speed path with fine curve
           //  //----------------------------//
-          //   double dist_inc = T_sample*ref_vel_mph*mph2mps; // 0.5
+          //   double dist_inc = T_sample*set_vel; // 0.5
           //  //  // std::cout << "dist_inc = " << dist_inc << std::endl;
           //  //  for (int i = 0; i < 50; ++i) {
           //  //     double next_s = car_s + (i+1) * dist_inc;
