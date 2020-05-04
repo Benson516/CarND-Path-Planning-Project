@@ -182,6 +182,7 @@ int main() {
           // Determin the following
           // - Find set_vel to use
           // - Determine if we are going to change lane
+          // std::cout << "sensor_fusion.size() = " << sensor_fusion.size() << std::endl;
           for (size_t i=0; i < sensor_fusion.size(); ++i){
               // For each car on the road
               double d = sensor_fusion[i][6];
