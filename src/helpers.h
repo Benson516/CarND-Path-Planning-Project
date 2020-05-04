@@ -131,13 +131,34 @@ vector<double> getFrenet(double x, double y, double theta,
 vector<double> getXY(double s, double d, const vector<double> &maps_s,
                      const vector<double> &maps_x,
                      const vector<double> &maps_y) {
-  int prev_wp = -1;
+  // int prev_wp = -1;
+  //
+  // while (s > maps_s[prev_wp+1] && (prev_wp < (int)(maps_s.size()-1))) {
+  //   ++prev_wp;
+  // }
+  //
+  // int wp2 = (prev_wp+1)%maps_x.size();
 
-  while (s > maps_s[prev_wp+1] && (prev_wp < (int)(maps_s.size()-1))) {
-    ++prev_wp;
-  }
+    int prev_wp = -1;
+    int wp2 = -1;
+    for (size_t i=1; i < maps_s.size(); ++i){
+      if (s <= maps_s[i] && s > maps_s[i-1]){
+          wp2 = i;
+          prev_wp = i-1;
+          break;
+      }else if ( maps_s[i] < maps_s[i-1] && s > maps_s[i-1]){
+          wp2 = i;
+          prev_wp = i-1;
+          break;
+      }
+    }
 
-  int wp2 = (prev_wp+1)%maps_x.size();
+    if (prev_wp == -1){
+        wp2 = 0;
+        prev_wp =  maps_s.size() -1;
+
+    }
+
 
   double heading = atan2((maps_y[wp2]-maps_y[prev_wp]),
                          (maps_x[wp2]-maps_x[prev_wp]));
@@ -155,7 +176,7 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
-// Pre-generate fine map
+// Pre-generated fine map
 bool generate_fine_map( double s_spacing,
                         const std::vector<double> &maps_s,
                         const std::vector<double> &maps_x,
@@ -208,4 +229,85 @@ bool generate_fine_map( double s_spacing,
 
     return true;
 }
+
+// Local fine map
+bool get_local_fine_map( double car_x, double car_y,
+                        double s_spacing,
+                        const std::vector<double> &maps_s,
+                        const std::vector<double> &maps_x,
+                        const std::vector<double> &maps_y,
+                        std::vector<double> &fine_maps_s,
+                        std::vector<double> &fine_maps_x,
+                        std::vector<double> &fine_maps_y)
+{
+    // Initialization
+    fine_maps_s.resize(0);
+    fine_maps_x.resize(0);
+    fine_maps_y.resize(0);
+
+    // Generate spline
+    //----------------------------------------//
+    // Anchor points list for spline
+    std::vector<double> ptss;
+    std::vector<double> ptsx;
+    std::vector<double> ptsy;
+
+    // Add four evenly spaced points (in Frenet) ahead of starting point
+    int closest_map_wp_id = ClosestWaypoint(car_x, car_y, maps_x, maps_y);
+    std::cout << "closest_map_wp_id = " << closest_map_wp_id << std::endl;
+
+    // Calculate the equality s-value for id:0 after going through a cycle
+    size_t eid = maps_s.size()-1;
+    double s_0 = maps_s[eid] + distance(maps_x[eid], maps_y[eid], maps_x[0], maps_y[0] );
+
+    // Method: Directly use map points, which are exactly at the center of lane
+    // The anchor points are: {pre-waypoint, next-waypoint, 2nd-next, 3rd-next}
+    int N_spline_anchor = 10; //6;
+    bool is_returned = false;
+    for (int i=0; i < N_spline_anchor; ++i){
+        int _id = (closest_map_wp_id+i-2) % int(maps_s.size());
+        if (_id < 0){
+            _id += maps_s.size();
+        }
+        // Determined if it's going to return to the begining
+        if (_id == 0 && i > 0){
+            is_returned = true;
+        }
+        double ptss_value =  maps_s[_id];
+        if (is_returned){
+            ptss_value += s_0;
+        }
+        // Anchor points list
+        ptss.push_back( ptss_value );
+        ptsx.push_back( maps_x[_id] );
+        ptsy.push_back( maps_y[_id] );
+    }
+
+    // Create splines
+    //--------------------------------------//
+    // These splines are parametric equations: x = sx(s), y = sy(s)
+    tk::spline sx,sy;
+    // Insert anchor points
+    sx.set_points(ptss, ptsx);
+    sy.set_points(ptss, ptsy);
+    //
+    // double s_spacing = 0.5; // m
+    double current_s = ptss[0]; // m
+    while (current_s < ptss[ptss.size()-1]){
+        double current_s_1 = current_s;
+        if (current_s_1 >= s_0){
+            current_s_1 -= s_0;
+        }
+        fine_maps_s.push_back( current_s_1);
+        fine_maps_x.push_back(sx(current_s));
+        fine_maps_y.push_back(sy(current_s));
+        current_s += s_spacing;
+    }
+    std::cout << "fine_maps_s.size() = " << fine_maps_s.size() << std::endl;
+    //--------------------------------------//
+
+    return true;
+}
+
+
 #endif  // HELPERS_H
