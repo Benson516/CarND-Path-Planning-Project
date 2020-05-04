@@ -68,14 +68,17 @@ int main() {
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
   //
-  double ref_vel_mph = 49.5; // mph
+  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  double accel_max = 5.0; // m/s^2
+  double accel_min = -8.0; // m/s^2
+  //
   // double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
   // Variables
   //---------------------//
   int lane = 1;
-  // The set speed
+  // The set speed, m/s <-- This is the speed our car forced to "follow" (track) because of traffic
   // double set_vel = ref_vel_mph * mph2mps; // m/s
   double set_vel = 0.0; // m/s
   //---------------------//
@@ -91,7 +94,8 @@ int main() {
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy,
                &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
-               &T_sample,&lane_width,&car_width,&lane,&ref_vel_mph,&set_vel]
+               &T_sample,&lane_width,&car_width,&accel_max,&accel_min,
+               &ref_vel_mph,&lane,&set_vel]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -147,6 +151,7 @@ int main() {
           double ref_x = car_x;
           double ref_y = car_y;
           double ref_yaw = deg2rad(car_yaw);
+          double end_path_speed = car_speed;
           //
           double ref_x_pre = ref_x;
           double ref_y_pre = ref_y;
@@ -162,13 +167,17 @@ int main() {
               ref_x_pre = previous_path_x[prev_size-2];
               ref_y_pre = previous_path_y[prev_size-2];
               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+              end_path_speed = distance(ref_x, ref_y, ref_x_pre, ref_y_pre)/T_sample;
           }
           //---------------------------------//
 
 
           // Behavior control
           //---------------------------------//
-          bool too_close = false;
+          // bool too_close = false;
+          int front_car_id = -1;
+          double front_car_distance = -1;
+          double front_car_speed = 0.0; // m/s
 
           // Determin the following
           // - Find set_vel to use
@@ -190,9 +199,17 @@ int main() {
 
                   if ((check_car_s > car_s) && ((check_car_s-car_s) < 30.0)){
                       // Do some logic here
+
+                      // Find the true front car (minimum distance ahead)
+                      if ((check_car_s-car_s) < front_car_distance || front_car_id < 0){
+                          front_car_id = i;
+                          front_car_distance = check_car_s-car_s;
+                          front_car_speed = check_speed;
+                      }
+
                       // set_vel = 29.5;
                       //
-                      too_close = true;
+                      // too_close = true;
                       // lane change to the left-most one
                       if (lane > 0){
                           lane -= 1;
@@ -206,12 +223,21 @@ int main() {
           }
 
           // Manage the speed
-          if (too_close){
+          // if (too_close){
+          //     std::cout << "too close!! speed down" << std::endl;
+          //     set_vel -= 8.0 * T_sample; // -10.0 m/s^2
+          // }else if ( set_vel < ref_vel_mph*mph2mps){
+          //     std::cout << "All is well~ speed up" << std::endl;
+          //     set_vel += 8.0 * T_sample; // 10.0 m/s^2
+          // }
+          // std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
+
+          if (front_car_id >= 0){
               std::cout << "too close!! speed down" << std::endl;
-              set_vel -= 8.0 * T_sample; // -10.0 m/s^2
-          }else if ( set_vel < ref_vel_mph*mph2mps){
+              set_vel = front_car_speed;
+          }else{
               std::cout << "All is well~ speed up" << std::endl;
-              set_vel += 8.0 * T_sample; // 10.0 m/s^2
+              set_vel = ref_vel_mph*mph2mps;
           }
           std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
 
@@ -362,13 +388,26 @@ int main() {
            double target_x = target_space;
            double target_y = s(target_x);
            double target_dist = sqrt( target_x*target_x + target_y*target_y);
-           double N_sample = target_dist/(T_sample*set_vel);
-           double dist_inc_x = target_x/N_sample; // 0.5
+           // double N_sample = target_dist/(T_sample*set_vel);
+           // double dist_inc_x = target_x/N_sample; // 0.5
+           //
+           accel_max
+           accel_min
            //
            double x_add_on = 0;
+           double speed_i = end_path_speed; // The initial speed is set to the last speed of the previous path
            // Fill up the rest of the path after filling up with previous path points.
            // Here we always output 50 points
            for (size_t i=1; i <= (50-previous_path_x.size()); ++i){
+               // Determin speed_i and dist_inc_x
+               //-----------------------------------//
+               if ( speed_i < set_vel)
+                    speed_i += accel_max * T_sample;
+               else if (speed_i > set_vel)
+                    speed_i += accel_min * T_sample; // Note: accel_min < 0.0
+               double dist_inc_x = (target_x/target_dist) * (T_sample*speed_i);
+               //-----------------------------------//
+               //
                double x_local = x_add_on + dist_inc_x;
                double y_local = s(x_local);
                x_add_on = x_local;
