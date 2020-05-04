@@ -68,8 +68,8 @@ int main() {
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
   //
-  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
-  double ref_vel_mph = 200; // 49.5; // mph
+  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -234,15 +234,21 @@ int main() {
           // std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
 
           if (front_car_id >= 0){
-              if ( front_car_distance < 15.0){
-                  std::cout << "too close!! slow down" << std::endl;
-                  double alpha = (15.0 - front_car_distance)/15.0;
-                  set_vel = front_car_speed * (1-alpha);
-              }else{
-                  std::cout << "Car overhead!! slow down" << std::endl;
-                  double alpha = (front_car_distance-15.0)/30.0;
-                  set_vel = front_car_speed * (1-alpha) + ref_vel_mph*mph2mps*alpha;
-              }
+              // if ( front_car_distance < 15.0){
+              //     std::cout << "too close!! slow down" << std::endl;
+              //     // double alpha = (15.0 - front_car_distance)/15.0;
+              //     // set_vel = front_car_speed * (1-alpha);
+              //     set_vel += accel_min * T_sample;
+              //     if (set_vel < 0.0)
+              //           set_vel = 0.0;
+              // }else{
+              //     std::cout << "Car overhead!! slow down" << std::endl;
+              //     // double alpha = (front_car_distance-15.0)/30.0;
+              //     // set_vel = front_car_speed * (1-alpha) + ref_vel_mph*mph2mps*alpha;
+              //     set_vel = front_car_speed;
+              // }
+              std::cout << "Car overhead!! slow down" << std::endl;
+              set_vel = front_car_speed;
 
           }else{
               std::cout << "All is well~ go with ref_vel_mph" << std::endl;
