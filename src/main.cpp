@@ -197,7 +197,8 @@ int main() {
                   // Prediction (simple): constant-speed, keep-lane
                   check_car_s += (double(prev_size)*T_sample) * check_speed;
 
-                  if ((check_car_s > ref_s) && ((check_car_s - ref_s) < 30.0)){
+                  double front_check_space = 30.0; // m
+                  if ((check_car_s > ref_s) && ((check_car_s - ref_s) < front_check_space)){
                       // Do some logic here
 
                       // Find the true front car (minimum distance ahead)
@@ -236,7 +237,7 @@ int main() {
               std::cout << "too close!! speed down" << std::endl;
               set_vel = front_car_speed;
           }else{
-              std::cout << "All is well~ speed up" << std::endl;
+              std::cout << "All is well~ go with ref_vel_mph" << std::endl;
               set_vel = ref_vel_mph*mph2mps;
           }
           std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
