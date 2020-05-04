@@ -315,9 +315,9 @@ int main() {
         // After this, we can use fine map waypoints for applying to getXY()
         // NOTE: Because the Frenet-to-xy conversion will deform the space (non-isometry),
         //       it's not appropriate to do sampling before transformation, which will
-        //       disturb the planed speed (especially when turning,
-        //       turning right will decrease the speed,
-        //       while turning left will increase the speed)
+        //       disturb the planed speed, especially when turning:
+        //          - turning right will decrease the speed
+        //          - turning left will increase the speed
         //----------------------------------------//
 
 
@@ -335,7 +335,7 @@ int main() {
 
            // Add three evenly spaced points (in Frenet) ahead of starting point
            // Method 1: Use getXY() and some s-values ahead with fine_maps
-           //           --> so that the car will not run off path
+           //           --> so that the car will not run off center line of lane
            // Note: target_space defines the maximum distance for lane-changing
            //-------------------//
            double target_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
@@ -350,19 +350,7 @@ int main() {
            // Note: (important) ref_s+_add_on_s should not exceed the last s-value of fine_maps_s!!
            //         ^^^ If the error of m[i-1] > m[i] appeared, it's this reason.
 
-           // vector<double> next_wp0 = getXY(ref_s+target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
-           // vector<double> next_wp1 = getXY(ref_s+2*target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
-           // vector<double> next_wp2 = getXY(ref_s+3*target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
-           // // x
-           // ptsx.push_back(next_wp0[0]);
-           // ptsx.push_back(next_wp1[0]);
-           // ptsx.push_back(next_wp2[0]);
-           // // y
-           // ptsy.push_back(next_wp0[1]);
-           // ptsy.push_back(next_wp1[1]);
-           // ptsy.push_back(next_wp2[1]);
            // Now we have totally 5 points in ptsx and ptsy
-
            // Change reference coordinate frame
            for (size_t i=0; i < ptsx.size(); ++i){
                double shift_x = ptsx[i] - ref_x;
@@ -384,25 +372,31 @@ int main() {
                next_y_vals.push_back(previous_path_y[i]);
            }
 
+           // Fill up the rest of the path after filling up with previous path points.
+           //     - Here we always output 50 points
            // Caluculate how to sample the spline point for required velocity
            double target_x = target_space;
            double target_y = s(target_x);
            double target_dist = sqrt( target_x*target_x + target_y*target_y);
            // double N_sample = target_dist/(T_sample*set_vel);
            // double dist_inc_x = target_x/N_sample; // 0.5
-           //
-           //
            double x_add_on = 0;
            double speed_i = end_path_speed; // The initial speed is set to the last speed of the previous path
-           // Fill up the rest of the path after filling up with previous path points.
-           // Here we always output 50 points
            for (size_t i=1; i <= (50-previous_path_x.size()); ++i){
                // Determin speed_i and dist_inc_x
                //-----------------------------------//
-               if ( speed_i < set_vel)
-                    speed_i += accel_max * T_sample;
-               else if (speed_i > set_vel)
-                    speed_i += accel_min * T_sample; // Note: accel_min < 0.0
+               double delta_speed = set_vel - speed_i;
+               if (delta_speed > accel_max * T_sample)
+                    delta_speed = accel_max * T_sample;
+               else if (delta_speed < accel_min * T_sample) // Note: accel_min < 0.0
+                    delta_speed = accel_min * T_sample;
+               // Update speed_i, if abs(delta_speed) is too small,
+               // the speed_i will become set_vel (speed_i <- set_vel)
+               speed_i += delta_speed;
+               // if ( speed_i < set_vel)
+               //      speed_i += accel_max * T_sample; // Speed up
+               // else if (speed_i > set_vel)
+               //      speed_i += accel_min * T_sample; // Speed down. Note: accel_min < 0.0
                double dist_inc_x = (target_x/target_dist) * (T_sample*speed_i);
                //-----------------------------------//
                //
