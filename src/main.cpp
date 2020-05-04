@@ -33,6 +33,8 @@ int main() {
   vector<double> map_waypoints_dx;
   vector<double> map_waypoints_dy;
 
+
+
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
   // The max s value before wrapping around the track back to 0
@@ -70,12 +72,22 @@ int main() {
   //---------------------//
   int lane = 1;
   // The reference speed
-  double ref_vel_mph = 49.5; // mph
-  // double ref_vel_mph = 200; // 49.5; // mph
+  // double ref_vel_mph = 49.5; // mph
+  double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
+  // Global fine maps
+  std::vector<double> g_fine_maps_s;
+  std::vector<double> g_fine_maps_x;
+  std::vector<double> g_fine_maps_y;
+  // generate_fine_map(0.5, map_waypoints_s, map_waypoints_x, map_waypoints_y,
+  //                       g_fine_maps_s, g_fine_maps_x, g_fine_maps_y);
+
+
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy,&T_sample,&lane_width,&lane,&ref_vel_mph]
+               &map_waypoints_dx,&map_waypoints_dy,
+               &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
+               &T_sample,&lane_width,&lane,&ref_vel_mph]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -114,6 +126,9 @@ int main() {
 
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
+          if ( prev_size > 10){
+              prev_size = 10;
+          }
 
           vector<double> next_x_vals;
           vector<double> next_y_vals;
@@ -178,66 +193,88 @@ int main() {
            // //----------------------------------------//
 
 
-
-           // Generate spline
-           //----------------------------------------//
-           // ptsx and ptsy are anchore points for apline
-           vector<double> ptsx;
-           vector<double> ptsy;
-
            // Reference x, y, yaw states
+           //---------------------------------//
+           double ref_s = car_s;
            double ref_x = car_x;
            double ref_y = car_y;
            double ref_yaw = deg2rad(car_yaw);
-
+           //
+           double ref_x_pre = ref_x;
+           double ref_y_pre = ref_y;
+           //
            if (prev_size < 2){
-               double ref_x_pre = car_x - cos(car_yaw);
-               double ref_y_pre = car_y - sin(car_yaw);
-
-               ptsx.push_back(ref_x_pre);
-               ptsx.push_back(ref_x);
-               ptsy.push_back(ref_y_pre);
-               ptsy.push_back(ref_y);
+               ref_x_pre = car_x - cos(car_yaw);
+               ref_y_pre = car_y - sin(car_yaw);
            }else{
-               // Redefine reference state as previous path end point
+               // Redefine reference states as previous path end point
+               ref_s = end_path_s;
                ref_x = previous_path_x[prev_size-1];
                ref_y = previous_path_y[prev_size-1];
-
-               double ref_x_pre = previous_path_x[prev_size-2];
-               double ref_y_pre = previous_path_y[prev_size-2];
+               ref_x_pre = previous_path_x[prev_size-2];
+               ref_y_pre = previous_path_y[prev_size-2];
                ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-
-               ptsx.push_back(ref_x_pre);
-               ptsx.push_back(ref_x);
-               ptsy.push_back(ref_y_pre);
-               ptsy.push_back(ref_y);
            }
+           //---------------------------------//
+
+
+        // Generate local fine-map
+        //----------------------------------------//
+        std::vector<double> fine_maps_s;
+        std::vector<double> fine_maps_x;
+        std::vector<double> fine_maps_y;
+        get_local_fine_map(car_x, car_y, 0.5,
+                            map_waypoints_s, map_waypoints_x, map_waypoints_y,
+                            fine_maps_s, fine_maps_x, fine_maps_y);
+        // After this, we can use fine map waypoints for applying to getXY()
+        // NOTE: Because the Frenet-to-xy conversion will deform the space (non-isometry),
+        //       it's not appropriate to do sampling before transformation, which will
+        //       disturb the planed speed (especially when turning,
+        //       turning right will decrease the speed,
+        //       while turning left will increase the speed)
+        //----------------------------------------//
+
+
+           // Generate spline
+           //----------------------------------------//
+           // Anchor points for spline
+           vector<double> ptsx;
+           vector<double> ptsy;
+           // First two points
+           ptsx.push_back(ref_x_pre);
+           ptsx.push_back(ref_x);
+           ptsy.push_back(ref_y_pre);
+           ptsy.push_back(ref_y);
+
 
            // Add three evenly spaced points (in Frenet) ahead of starting point
+           // Method 1: Use getXY() and some s-values ahead with fine_maps
+           //           --> so that the car will not run off path
+           // Note: target_space defines the maximum distance for lane-changing
+           //-------------------//
+           double target_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
+           double p_space = 10.0; // m
+           //-------------------//
+           for (size_t i=0; i < 3; ++i){
+               double _add_on_s =  target_space + i*p_space;
+               vector<double> _next_wp = getXY( ref_s+_add_on_s, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+               ptsx.push_back(_next_wp[0]);
+               ptsy.push_back(_next_wp[1]);
+           }
+           // Note: (important) ref_s+_add_on_s should not exceed the last s-value of fine_maps_s!!
+           //         ^^^ If the error of m[i-1] > m[i] appeared, it's this reason.
 
-           // Method 1: Use getXY() and some arbitrarilt given s-values
-           //      --> Not so soomth path and might sometime run off lane
-           // TODO: Why use car_s instead of end_path_s?
-           // double cp_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
-           // vector<double> next_wp0 = getXY(car_s+cp_space, lane_to_d(lane,lane_width), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-           // vector<double> next_wp1 = getXY(car_s+2*cp_space, lane_to_d(lane,lane_width), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-           // vector<double> next_wp2 = getXY(car_s+3*cp_space, lane_to_d(lane,lane_width), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-
-           // Method 2: Directly use map points, which are exactly at the center of lane
-           int next_map_wp_id = NextWaypoint(ref_x, ref_y, ref_yaw, map_waypoints_x, map_waypoints_y);
-           std::cout << "next_map_wp_id = " << next_map_wp_id << std::endl;
-           vector<double> next_wp0 = {map_waypoints_x[next_map_wp_id], map_waypoints_y[next_map_wp_id]};
-           vector<double> next_wp1 = {map_waypoints_x[(next_map_wp_id+1)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+1)%map_waypoints_x.size()]};
-           vector<double> next_wp2 = {map_waypoints_x[(next_map_wp_id+2)%map_waypoints_x.size()], map_waypoints_y[(next_map_wp_id+2)%map_waypoints_x.size()]};
-           //
-           ptsx.push_back(next_wp0[0]);
-           ptsx.push_back(next_wp1[0]);
-           ptsx.push_back(next_wp2[0]);
-           //
-           ptsy.push_back(next_wp0[1]);
-           ptsy.push_back(next_wp1[1]);
-           ptsy.push_back(next_wp2[1]);
-
+           // vector<double> next_wp0 = getXY(ref_s+target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           // vector<double> next_wp1 = getXY(ref_s+2*target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           // vector<double> next_wp2 = getXY(ref_s+3*target_space, lane_to_d(lane,lane_width), fine_maps_s, fine_maps_x, fine_maps_y);
+           // // x
+           // ptsx.push_back(next_wp0[0]);
+           // ptsx.push_back(next_wp1[0]);
+           // ptsx.push_back(next_wp2[0]);
+           // // y
+           // ptsy.push_back(next_wp0[1]);
+           // ptsy.push_back(next_wp1[1]);
+           // ptsy.push_back(next_wp2[1]);
            // Now we have totally 5 points in ptsx and ptsy
 
            // Change reference coordinate frame
@@ -246,6 +283,7 @@ int main() {
                double shift_y = ptsy[i] - ref_y;
                ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
                ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
+               // std::cout << "ptsx[" << i << "] = " << ptsx[i] << std::endl;
            }
 
            // Create a spline
@@ -255,39 +293,56 @@ int main() {
 
 
            // Push the previous_path into next vals
-           for (size_t i=0; i < previous_path_x.size(); ++i){
+           for (size_t i=0; i < prev_size; ++i){
                next_x_vals.push_back(previous_path_x[i]);
                next_y_vals.push_back(previous_path_y[i]);
            }
 
            // Caluculate how to sample the spline point for required velocity
-           double target_x = 30.0;
+           double target_x = target_space;
            double target_y = s(target_x);
            double target_dist = sqrt( target_x*target_x + target_y*target_y);
-
+           double N_sample = target_dist/(T_sample*ref_vel_mph*mph2mps);
+           double dist_inc_x = target_x/N_sample; // 0.5
+           //
            double x_add_on = 0;
-
-
            // Fill up the rest of the path after filling up with previous path points.
            // Here we always output 50 points
            for (size_t i=1; i <= (50-previous_path_x.size()); ++i){
-               double N = target_dist/(T_sample*ref_vel_mph*mph2mps);
-               double x_local = x_add_on + target_x/N;
+               double x_local = x_add_on + dist_inc_x;
                double y_local = s(x_local);
                x_add_on = x_local;
-
                // Coordinate transformation, from local frame to global frame
-               double x_point = x_local * cos(ref_yaw) - y_local * sin(ref_yaw);
-               double y_point = x_local * sin(ref_yaw) + y_local * cos(ref_yaw);
-               // Translation
-               x_point += ref_x;
-               y_point += ref_y;
-
+               double x_point = ref_x + ( x_local * cos(ref_yaw) - y_local * sin(ref_yaw) );
+               double y_point = ref_y + ( x_local * sin(ref_yaw) + y_local * cos(ref_yaw) );
                // Add point to path
                next_x_vals.push_back( x_point );
                next_y_vals.push_back( y_point );
            }
            //----------------------------------------//
+
+          //  // Constant speed path with fine curve
+          //  //----------------------------//
+          //   double dist_inc = T_sample*ref_vel_mph*mph2mps; // 0.5
+          //  //  // std::cout << "dist_inc = " << dist_inc << std::endl;
+          //  //  for (int i = 0; i < 50; ++i) {
+          //  //     double next_s = car_s + (i+1) * dist_inc;
+          //  //     double next_d = lane_to_d(lane, lane_width);
+          //  //     std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+          //  //     next_x_vals.push_back(xy[0]);
+          //  //     next_y_vals.push_back(xy[1]);
+          //  // }
+          //  for (int i = 0; i < (50-prev_size); ++i) {
+          //     // double next_s = car_s + (i+1) * dist_inc;
+          //     double next_s = ref_s + (i+1) * dist_inc;
+          //     double next_d = lane_to_d(lane, lane_width);
+          //     std::vector<double> xy = getXY(next_s,next_d, fine_maps_s, fine_maps_x, fine_maps_y);
+          //     // std::vector<double> xy = getXY(next_s,next_d, g_fine_maps_s, g_fine_maps_x, g_fine_maps_y);
+          //     next_x_vals.push_back(xy[0]);
+          //     next_y_vals.push_back(xy[1]);
+          // }
+           //----------------------------//
+
 
 
           //---------------------------------------------------//
