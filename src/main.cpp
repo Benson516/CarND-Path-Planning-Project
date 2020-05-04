@@ -193,6 +193,10 @@ int main() {
                       // set_vel = 29.5;
                       //
                       too_close = true;
+                      // lane change to the left-most one
+                      if (lane > 0){
+                          lane = 0;
+                      }
                   }
                   //
               }
