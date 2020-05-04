@@ -234,8 +234,16 @@ int main() {
           // std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
 
           if (front_car_id >= 0){
-              std::cout << "too close!! speed down" << std::endl;
-              set_vel = front_car_speed;
+              if ( front_car_distance < 15.0){
+                  std::cout << "too close!! slow down" << std::endl;
+                  double alpha = (15.0 - front_car_distance)/15.0;
+                  set_vel = front_car_speed * (1-alpha);
+              }else{
+                  std::cout << "Car overhead!! slow down" << std::endl;
+                  double alpha = (front_car_distance-15.0)/30.0;
+                  set_vel = front_car_speed * (1-alpha) + ref_vel_mph*mph2mps*alpha;
+              }
+
           }else{
               std::cout << "All is well~ go with ref_vel_mph" << std::endl;
               set_vel = ref_vel_mph*mph2mps;
