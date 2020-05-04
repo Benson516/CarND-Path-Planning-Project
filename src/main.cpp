@@ -66,6 +66,7 @@ int main() {
   //---------------------//
   double T_sample = 0.02; // 20 ms, sampling period
   double lane_width = 4.0; // m
+  double car_width = 2.5; // m, 2.0 + 0.5 (margin)
   //---------------------//
 
   // Variables
@@ -87,7 +88,7 @@ int main() {
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy,
                &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
-               &T_sample,&lane_width,&lane,&ref_vel_mph]
+               &T_sample,&lane_width,&car_width,&lane,&ref_vel_mph]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -124,15 +125,17 @@ int main() {
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
 
+
+
+
+          //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
           if ( prev_size > 10){
               prev_size = 10;
           }
-
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-
           //---------------------------------------------------//
 
           // Reference x, y, yaw states
@@ -160,7 +163,40 @@ int main() {
           //---------------------------------//
 
 
-          
+          // Behavior control
+          //---------------------------------//
+          bool too_close = false;
+
+          // Determin the following
+          // - Find ref_vel_mph to use
+          // - Determine if we are going to change lane
+          for (size_t i=0; i < sensor_fusion.size(); ++i){
+              // For each car on the road
+              double d = sensor_fusion[i][6];
+              int car_lane_id = d_to_lane(d, lane_width);
+              if (car_lane_id == lane){
+                  // Car is at the same lane with may car
+                  // TODO: need to be replaced with the collision criterion using car_width
+                  double vx = sensor_fusion[i][3];
+                  double vy = sensor_fusion[i][4];
+                  double check_speed = sqrt(vx*vx + vy*vy);
+                  double check_car_s = sensor_fusion[i][5];
+
+                  // Prediction (simple): constant-speed, keep-lane
+                  check_car_s += (double(prev_size)*T_sample) * check_speed;
+
+                  if ((check_car_s > car_s) && ((check_car_s-car_s) < 30.0)){
+                      // Do some logic here
+                      ref_vel_mph = 29.5;
+                      //
+                  }
+                  //
+              }
+              // end Checking the collision
+          }
+
+
+          //---------------------------------//
 
           /**
            * TODO: define a path made up of (x,y) points that the car will visit
