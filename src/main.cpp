@@ -135,6 +135,33 @@ int main() {
 
           //---------------------------------------------------//
 
+          // Reference x, y, yaw states
+          //---------------------------------//
+          double ref_s = car_s;
+          double ref_x = car_x;
+          double ref_y = car_y;
+          double ref_yaw = deg2rad(car_yaw);
+          //
+          double ref_x_pre = ref_x;
+          double ref_y_pre = ref_y;
+          //
+          if (prev_size < 2){
+              ref_x_pre = car_x - cos(car_yaw);
+              ref_y_pre = car_y - sin(car_yaw);
+          }else{
+              // Redefine reference states as previous path end point
+              ref_s = end_path_s;
+              ref_x = previous_path_x[prev_size-1];
+              ref_y = previous_path_y[prev_size-1];
+              ref_x_pre = previous_path_x[prev_size-2];
+              ref_y_pre = previous_path_y[prev_size-2];
+              ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+          }
+          //---------------------------------//
+
+
+          
+
           /**
            * TODO: define a path made up of (x,y) points that the car will visit
            *   sequentially every .02 seconds
@@ -193,29 +220,7 @@ int main() {
            // //----------------------------------------//
 
 
-           // Reference x, y, yaw states
-           //---------------------------------//
-           double ref_s = car_s;
-           double ref_x = car_x;
-           double ref_y = car_y;
-           double ref_yaw = deg2rad(car_yaw);
-           //
-           double ref_x_pre = ref_x;
-           double ref_y_pre = ref_y;
-           //
-           if (prev_size < 2){
-               ref_x_pre = car_x - cos(car_yaw);
-               ref_y_pre = car_y - sin(car_yaw);
-           }else{
-               // Redefine reference states as previous path end point
-               ref_s = end_path_s;
-               ref_x = previous_path_x[prev_size-1];
-               ref_y = previous_path_y[prev_size-1];
-               ref_x_pre = previous_path_x[prev_size-2];
-               ref_y_pre = previous_path_y[prev_size-2];
-               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-           }
-           //---------------------------------//
+
 
 
         // Generate local fine-map
