@@ -68,8 +68,8 @@ int main() {
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
   //
-  // double ref_vel_mph = 49.5; // mph
-  double ref_vel_mph = 200; // 49.5; // mph
+  double ref_vel_mph = 49.5; // mph
+  // double ref_vel_mph = 200; // 49.5; // mph
   //---------------------//
 
   // Variables
@@ -201,10 +201,13 @@ int main() {
 
           // Manage the speed
           if (too_close){
-              set_vel -= 10.0 * T_sample; // -10.0 m/s^2
+              std::cout << "too close!! speed down" << std::endl;
+              set_vel -= 8.0 * T_sample; // -10.0 m/s^2
           }else if ( set_vel < ref_vel_mph*mph2mps){
-              set_vel += 10.0 * T_sample; // 10.0 m/s^2
+              std::cout << "All is well~ speed up" << std::endl;
+              set_vel += 8.0 * T_sample; // 10.0 m/s^2
           }
+          std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
 
           //---------------------------------//
 
