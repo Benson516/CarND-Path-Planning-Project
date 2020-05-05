@@ -68,7 +68,7 @@ int main() {
   double T_sample = 0.02; // 20 ms, sampling period
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
-  double car_length = 7.0; // m, 5.0 + 1.0*2 (margin)
+  double car_length = 15.0; // m, 5.0 + 5.0*2 (margin)
   //
   double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 200; // 49.5; // mph
@@ -337,6 +337,9 @@ int main() {
                   }
               }
               // Find te largest traveling s
+              for (size_t i=0; i < N_lane; ++i){
+                  std::cout << "action #" << i << ": delta_s = " << (a_pos_s[i] - ref_s) << ",\tcolided=" << a_is_collided[i] << std::endl;
+              }
 
               // Make decision (choose action)
 
