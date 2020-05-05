@@ -251,6 +251,9 @@ int main() {
 
           // Sample and simulation for each action
           //-----------//
+          // The following variables are the output of the decision-making module
+          int dec_lane = lane;
+          double dec_speed = set_vel;
           {
               double T_sim_horizon = 3.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
@@ -330,21 +333,49 @@ int main() {
                           double dist_d = fabs(c_obj_d[k] - a_pos_d[i]);
                           if ( dist_s <= car_length && dist_d <= car_width){
                               a_is_collided[i] = true;
-                              break; // Save calculation
+                              break; // Save calculation time
                           }
                       }
                       //-----------------------------//
                   }
               }
+
               // Find te largest traveling s
+              int lane_id_max = -1;
+              double ds_max = 0.0;
               for (size_t i=0; i < N_lane; ++i){
                   std::cout << "action #" << i << ": delta_s = " << (a_pos_s[i] - ref_s) << ",\tcolided=" << a_is_collided[i] << std::endl;
+                  if ( !a_is_collided[i] ){
+                      // We have to make sure that there is no collision
+                      if ( (a_pos_s[i] - ref_s) > ds_max || lane_id_max < 0){
+                          lane_id_max = i;
+                          ds_max = (a_pos_s[i] - ref_s);
+                      }
+                  }
               }
+              //
 
               // Make decision (choose action)
-
+              if (lane_id_max < 0){
+                  // All choise resulted in collision, just stay in the current lane and try it's best in braking
+                  dec_lane = lane;
+                  dec_speed = 0.0; // Decelerate to stop
+              }else{
+                  // We got a best lane to go (go further during specified time period)
+                  if ( (lane_id_max-lane) > 0 ){
+                      dec_lane = lane + 1; // Change one lane a time, no matter how far the lane we actually want
+                      dec_speed = set_vel; // TODO: modify this
+                  }else if ( (lane_id_max-lane) < 0 ){
+                      dec_lane = lane - 1;
+                      dec_speed = set_vel; // TODO: modify this
+                  }else{
+                      // Equal
+                      dec_lane = lane;
+                      dec_speed = set_vel; // TODO: modify this
+                  }
+              }
+              //
           }
-
           //-----------//
 
 
