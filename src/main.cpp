@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <math.h>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "Eigen-3.3/Eigen/Dense"
@@ -67,6 +68,7 @@ int main() {
   double T_sample = 0.02; // 20 ms, sampling period
   double lane_width = 4.0; // m
   double car_width = 2.5; // m, 2.0 + 0.5 (margin)
+  double car_length = 7.0; // m, 5.0 + 1.0*2 (margin)
   //
   double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 200; // 49.5; // mph
@@ -148,6 +150,7 @@ int main() {
           // Reference x, y, yaw states
           //---------------------------------//
           double ref_s = car_s;
+          double ref_d = car_d;
           double ref_x = car_x;
           double ref_y = car_y;
           double ref_yaw = deg2rad(car_yaw);
@@ -162,6 +165,7 @@ int main() {
           }else{
               // Redefine reference states as previous path end point
               ref_s = end_path_s;
+              ref_d = end_path_d;
               ref_x = previous_path_x[prev_size-1];
               ref_y = previous_path_y[prev_size-1];
               ref_x_pre = previous_path_x[prev_size-2];
@@ -176,74 +180,169 @@ int main() {
           //---------------------------------//
 
 
-          // Classification of the cars
-          std::vector<size_t> car_left_ids;
-          std::vector<size_t> car_right_ids;
+          // // Classification of the cars
+          // std::vector<size_t> car_left_ids;
+          // std::vector<size_t> car_right_ids;
+          // //
+          // int car_front_id = -1;
+          // double car_front_distance = -1;
+          // double car_front_speed = 0.0; // m/s
+          // int car_back_id = -1;
+          // double car_back_distance = -1;
+          // double car_back_speed = 0.0; // m/s
           //
-          int car_front_id = -1;
-          double car_front_distance = -1;
-          double car_front_speed = 0.0; // m/s
-          int car_back_id = -1;
-          double car_back_distance = -1;
-          double car_back_speed = 0.0; // m/s
+          // for (size_t i=0; i < sensor_fusion.size(); ++i){
+          //     // For each car on the road
+          //     double d = sensor_fusion[i][6];
+          //     // std::cout << i << ":d=" << d << std::endl;
+          //     int car_lane_id = d_to_lane(d, lane_width);
+          //     if (car_lane_id == lane){
+          //         // The same lane
+          //         double vx = sensor_fusion[i][3];
+          //         double vy = sensor_fusion[i][4];
+          //         double check_speed = sqrt(vx*vx + vy*vy);
+          //         double check_car_s = sensor_fusion[i][5];
+          //         // Prediction for the time at prev_size path point (simple):
+          //         //                                 constant-speed, keep-lane
+          //         check_car_s += (double(prev_size)*T_sample) * check_speed;
+          //         if (check_car_s >= ref_s){
+          //             // Front car
+          //             // Find the closest front car (minimum distance ahead)
+          //             if ((check_car_s-ref_s) < car_front_distance || car_front_id < 0){
+          //                 car_front_id = i;
+          //                 car_front_distance = check_car_s - ref_s;
+          //                 car_front_speed = check_speed;
+          //             }
+          //         }else{
+          //             // Rear car
+          //             // Find the closest rear car (minimum distance behind)
+          //             if ((ref_s-check_car_s) < car_back_distance || car_back_id < 0){
+          //                 car_back_id = i;
+          //                 car_back_distance = ref_s - check_car_s;
+          //                 car_back_speed = check_speed;
+          //             }
+          //         }
+          //     }else if (car_lane_id == (lane-1)){
+          //         // The left lane
+          //         car_left_ids.push_back(i);
+          //     }else if (car_lane_id == (lane+1)){
+          //         // The right lane
+          //         car_right_ids.push_back(i);
+          //     }
+          // }
+          //
+          // // test, print out all the car ids found
+          // //
+          // std::cout << "car_left_ids = [";
+          // for (size_t i=0; i < car_left_ids.size(); ++i){
+          //     std::cout << car_left_ids[i] << " ";
+          // }
+          // std::cout << "]" << std::endl;
+          // //
+          // std::cout << "car_right_ids = [";
+          // for (size_t i=0; i < car_right_ids.size(); ++i){
+          //     std::cout << car_right_ids[i] << " ";
+          // }
+          // std::cout << "]" << std::endl;
+          // //
+          // std::cout << "Front: (id, distance, speed) = (" << car_front_id << ", " << car_front_distance << ", " << car_front_speed << ")" << std::endl;
+          // std::cout << "Back:  (id, distance, speed) = (" << car_back_id << ", " << car_back_distance << ", " << car_back_speed << ")" << std::endl;
+          // //
 
-          for (size_t i=0; i < sensor_fusion.size(); ++i){
-              // For each car on the road
-              double d = sensor_fusion[i][6];
-              // std::cout << i << ":d=" << d << std::endl;
-              int car_lane_id = d_to_lane(d, lane_width);
-              if (car_lane_id == lane){
-                  // The same lane
-                  double vx = sensor_fusion[i][3];
-                  double vy = sensor_fusion[i][4];
-                  double check_speed = sqrt(vx*vx + vy*vy);
-                  double check_car_s = sensor_fusion[i][5];
-                  // Prediction for the time at prev_size path point (simple):
-                  //                                 constant-speed, keep-lane
-                  check_car_s += (double(prev_size)*T_sample) * check_speed;
-                  if (check_car_s >= ref_s){
-                      // Front car
-                      // Find the closest front car (minimum distance ahead)
-                      if ((check_car_s-ref_s) < car_front_distance || car_front_id < 0){
-                          car_front_id = i;
-                          car_front_distance = check_car_s - ref_s;
-                          car_front_speed = check_speed;
-                      }
-                  }else{
-                      // Rear car
-                      // Find the closest rear car (minimum distance behind)
-                      if ((ref_s-check_car_s) < car_back_distance || car_back_id < 0){
-                          car_back_id = i;
-                          car_back_distance = ref_s - check_car_s;
-                          car_back_speed = check_speed;
-                      }
-                  }
-              }else if (car_lane_id == (lane-1)){
-                  // The left lane
-                  car_left_ids.push_back(i);
-              }else if (car_lane_id == (lane+1)){
-                  // The right lane
-                  car_right_ids.push_back(i);
+          // Sample and simulation for each action
+          //-----------//
+          {
+              double T_sim_horizon = 3.0; // sec.
+              double dT_sim = 0.02; // sec. sample every dT_sim second
+              // Other cars
+              std::vector<double> c_obj_s;
+              std::vector<double> c_obj_d;
+              std::vector<double> c_obj_speed;
+              // Initialize the cars' status at (prev_size*T_sample) ahead of current time
+              // Put all the sensed car into the lists
+              for (size_t i=0; i < sensor_fusion.size(); ++i){
+                    // We assume the car is going forward along the lane
+                    // so we only consider the magnitude
+                    double vx = sensor_fusion[i][3];
+                    double vy = sensor_fusion[i][4];
+                    double check_speed = sqrt(vx*vx + vy*vy);
+                    double check_car_s = sensor_fusion[i][5];
+                    // Prediction (simple): constant-speed, keep-lane
+                    check_car_s += (double(prev_size)*T_sample) * check_speed;
+                    double d = sensor_fusion[i][6];
+                    //
+                    c_obj_s.push_back( check_car_s );
+                    c_obj_d.push_back( d );
+                    c_obj_speed.push_back( check_speed );
               }
+
+              //
+              size_t N_lane = 3;
+              double target_s = ref_s + 30.0; // 30.0 m ahead
+              // States of each action
+              std::vector<double> a_pos_s(N_lane, ref_s);
+              std::vector<double> a_pos_d(N_lane, ref_d);
+              std::vector<double> a_vel_s(N_lane);
+              std::vector<double> a_vel_d(N_lane);
+              std::vector<bool> a_is_lane_reached(N_lane, false);
+              // Initialize the velocity of ego car toward each lane's target
+              for (size_t i=0; i < N_lane; ++i){
+                  double target_d_i = lane_to_d(i, lane_width);
+                  double target_angle = atan2((target_d_i-a_pos_d[i]) , (target_s-a_pos_s[i]));
+                  a_vel_s[i] = end_path_speed * cos(target_angle);
+                  a_vel_d[i] = end_path_speed * sin(target_angle);
+              }
+
+              std::vector<bool> a_is_collided(N_lane, false);
+              // Loop forward time
+              for (double _t = dT_sim; _t < T_sim_horizon; _t += dT_sim){
+                  // Move other cars forward one step in time
+                  for (size_t k=0; k < c_obj_s.size(); ++k){
+                      c_obj_s[k] += dT_sim * c_obj_speed[k];
+                  }
+                  // Loop for each direction at current sim. time
+                  for (size_t i=0; i < N_lane; ++i){
+                      // Save the calculation if no hope for the action
+                      if (a_is_collided[i]){
+                          continue;
+                      }
+
+                      // Move one step
+                      //-----------------------------//
+                      a_pos_s[i] += dT_sim * a_vel_s[i];
+                      a_pos_d[i] += dT_sim * a_vel_d[i];
+                      // Check if the target lane reached
+                      if (!a_is_lane_reached[i]){
+                          if ( fabs(a_pos_d[i] - ref_d) >= fabs(double(i-lane))*lane_width ){
+                              a_is_lane_reached[i] = true;
+                              // Go straigntly forward
+                              double _speed = sqrt(a_vel_s[i]*a_vel_s[i] + a_vel_d[i]*a_vel_d[i]);
+                              a_vel_s[i] = _speed;
+                              a_vel_d[i] = 0.0;
+                          }
+                      }
+                      //-----------------------------//
+
+                      // Check collision
+                      //-----------------------------//
+                      for (size_t k=0; k < c_obj_s.size(); ++k){
+                          double dist_s = fabs(c_obj_s[k] - a_pos_s[i]);
+                          double dist_d = fabs(c_obj_d[k] - d_pos_s[i]);
+                          if ( dist_s <= car_length && dist_d <= car_width){
+                              a_is_collided[i] = true;
+                              break; // Save calculation
+                          }
+                      }
+                      //-----------------------------//
+                  }
+              }
+              // Find te largest traveling s
+
+              // Make decision (choose action)
+
           }
 
-          // test, print out all the car ids found
-          //
-          std::cout << "car_left_ids = [";
-          for (size_t i=0; i < car_left_ids.size(); ++i){
-              std::cout << car_left_ids[i] << " ";
-          }
-          std::cout << "]" << std::endl;
-          //
-          std::cout << "car_right_ids = [";
-          for (size_t i=0; i < car_right_ids.size(); ++i){
-              std::cout << car_right_ids[i] << " ";
-          }
-          std::cout << "]" << std::endl;
-          //
-          std::cout << "Front: (id, distance, speed) = (" << car_front_id << ", " << car_front_distance << ", " << car_front_speed << ")" << std::endl;
-          std::cout << "Back:  (id, distance, speed) = (" << car_back_id << ", " << car_back_distance << ", " << car_back_speed << ")" << std::endl;
-          //
+          //-----------//
 
 
           // bool too_close = false;
