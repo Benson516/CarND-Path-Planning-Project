@@ -158,8 +158,20 @@ int main() {
           //
           double ref_x_pre = ref_x;
           double ref_y_pre = ref_y;
-          //
+
+          // Decide if using previous end-path yaw angle to determing the direction
+          bool is_faking_ref = false;
           if (prev_size < 2){
+              is_faking_ref = true;
+          }else{
+              double _delta_x = fabs(double(previous_path_x[prev_size-1]) - double(previous_path_x[0]) );
+              double _delta_y = fabs(double(previous_path_y[prev_size-1]) - double(previous_path_y[0]) );
+              if ((_delta_x + _delta_y) < 0.001){ // unit: m
+                  is_faking_ref = true;
+              }
+          }
+          // Assign the ref. values
+          if (is_faking_ref){
               ref_x_pre = car_x - cos(car_yaw);
               ref_y_pre = car_y - sin(car_yaw);
           }else{
@@ -168,10 +180,22 @@ int main() {
               ref_d = end_path_d;
               ref_x = previous_path_x[prev_size-1];
               ref_y = previous_path_y[prev_size-1];
+              //
               ref_x_pre = previous_path_x[prev_size-2];
               ref_y_pre = previous_path_y[prev_size-2];
+              double _delta_x = fabs(ref_x - ref_x_pre);
+              double _delta_y = fabs(ref_y - ref_y_pre);
+              int pre_i = prev_size-2;
+              while ( (_delta_x+_delta_y) < 0.001 && pre_i > 0){ // unit: m
+                  pre_i -= 1;
+                  ref_x_pre = previous_path_x[pre_i];
+                  ref_y_pre = previous_path_y[pre_i];
+                  _delta_x = fabs(ref_x - ref_x_pre);
+                  _delta_y = fabs(ref_y - ref_y_pre);
+              }
+              //
               ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
-              end_path_speed = distance(ref_x, ref_y, ref_x_pre, ref_y_pre)/T_sample;
+              end_path_speed = distance(ref_x, ref_y, ref_x_pre, ref_y_pre)/(T_sample * double(prev_size-1 - pre_i));
           }
           //---------------------------------//
 
@@ -359,85 +383,87 @@ int main() {
               if (lane_id_max < 0){
                   // All choise resulted in collision, just stay in the current lane and try it's best in braking
                   dec_lane = lane;
-                  dec_speed = 0.0; // Decelerate to stop
+                  dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
               }else{
                   // We got a best lane to go (go further during specified time period)
                   if ( (lane_id_max-lane) > 0 ){
                       dec_lane = lane + 1; // Change one lane a time, no matter how far the lane we actually want
-                      dec_speed = set_vel; // TODO: modify this
+                      dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
                   }else if ( (lane_id_max-lane) < 0 ){
                       dec_lane = lane - 1;
-                      dec_speed = set_vel; // TODO: modify this
+                      dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
                   }else{
                       // Equal
                       dec_lane = lane;
-                      dec_speed = set_vel; // TODO: modify this
+                      dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
                   }
               }
               //
           }
+          lane = dec_lane;
+          set_vel = dec_speed;
           //-----------//
 
 
-          // bool too_close = false;
-          int front_car_id = -1;
-          double front_car_distance = -1;
-          double front_car_speed = 0.0; // m/s
-          // Determin the following
-          // - Find set_vel to use
-          // - Determine if we are going to change lane
-          // std::cout << "sensor_fusion.size() = " << sensor_fusion.size() << std::endl;
-          for (size_t i=0; i < sensor_fusion.size(); ++i){
-              // For each car on the road
-              double d = sensor_fusion[i][6];
-              // std::cout << i << ":d=" << d << std::endl;
-              int car_lane_id = d_to_lane(d, lane_width);
-              if (car_lane_id == lane){
-                  // Car is at the same lane with may car
-                  // TODO: need to be replaced with the collision criterion using car_width
-                  double vx = sensor_fusion[i][3];
-                  double vy = sensor_fusion[i][4];
-                  double check_speed = sqrt(vx*vx + vy*vy);
-                  double check_car_s = sensor_fusion[i][5];
-
-                  // Prediction (simple): constant-speed, keep-lane
-                  check_car_s += (double(prev_size)*T_sample) * check_speed;
-
-                  double front_check_space = 30.0; // m
-                  if ((check_car_s > ref_s) && ((check_car_s - ref_s) < front_check_space)){
-                      // Do some logic here
-
-                      // Find the true front car (minimum distance ahead)
-                      if ((check_car_s-ref_s) < front_car_distance || front_car_id < 0){
-                          front_car_id = i;
-                          front_car_distance = check_car_s-ref_s;
-                          front_car_speed = check_speed;
-                      }
-
-                      // set_vel = 29.5;
-                      //
-                      // too_close = true;
-                      // lane change to the left-most one
-                      if (lane > 0){
-                          lane -= 1;
-                      }else if( lane == 0){
-                          lane += 1;
-                      }
-                  }
-                  //
-              }
-              // end Checking the collision
-          }
-
-          // Manage the speed
-          if (front_car_id >= 0){
-              std::cout << "Car overhead!! slow down" << std::endl;
-              set_vel = front_car_speed;
-          }else{
-              std::cout << "All is well~ go with ref_vel_mph" << std::endl;
-              set_vel = ref_vel_mph*mph2mps;
-          }
-          std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
+          // // bool too_close = false;
+          // int front_car_id = -1;
+          // double front_car_distance = -1;
+          // double front_car_speed = 0.0; // m/s
+          // // Determin the following
+          // // - Find set_vel to use
+          // // - Determine if we are going to change lane
+          // // std::cout << "sensor_fusion.size() = " << sensor_fusion.size() << std::endl;
+          // for (size_t i=0; i < sensor_fusion.size(); ++i){
+          //     // For each car on the road
+          //     double d = sensor_fusion[i][6];
+          //     // std::cout << i << ":d=" << d << std::endl;
+          //     int car_lane_id = d_to_lane(d, lane_width);
+          //     if (car_lane_id == lane){
+          //         // Car is at the same lane with may car
+          //         // TODO: need to be replaced with the collision criterion using car_width
+          //         double vx = sensor_fusion[i][3];
+          //         double vy = sensor_fusion[i][4];
+          //         double check_speed = sqrt(vx*vx + vy*vy);
+          //         double check_car_s = sensor_fusion[i][5];
+          //
+          //         // Prediction (simple): constant-speed, keep-lane
+          //         check_car_s += (double(prev_size)*T_sample) * check_speed;
+          //
+          //         double front_check_space = 30.0; // m
+          //         if ((check_car_s > ref_s) && ((check_car_s - ref_s) < front_check_space)){
+          //             // Do some logic here
+          //
+          //             // Find the true front car (minimum distance ahead)
+          //             if ((check_car_s-ref_s) < front_car_distance || front_car_id < 0){
+          //                 front_car_id = i;
+          //                 front_car_distance = check_car_s-ref_s;
+          //                 front_car_speed = check_speed;
+          //             }
+          //
+          //             // set_vel = 29.5;
+          //             //
+          //             // too_close = true;
+          //             // lane change to the left-most one
+          //             if (lane > 0){
+          //                 lane -= 1;
+          //             }else if( lane == 0){
+          //                 lane += 1;
+          //             }
+          //         }
+          //         //
+          //     }
+          //     // end Checking the collision
+          // }
+          //
+          // // Manage the speed
+          // if (front_car_id >= 0){
+          //     std::cout << "Car overhead!! slow down" << std::endl;
+          //     set_vel = front_car_speed;
+          // }else{
+          //     std::cout << "All is well~ go with ref_vel_mph" << std::endl;
+          //     set_vel = ref_vel_mph*mph2mps;
+          // }
+          std::cout << "lane = " << lane << ", set_vel = " << set_vel*mps2mph << " mph" << std::endl;
 
           //---------------------------------//
 
