@@ -430,15 +430,6 @@ int main() {
           }
 
           // Manage the speed
-          // if (too_close){
-          //     std::cout << "too close!! speed down" << std::endl;
-          //     set_vel -= 8.0 * T_sample; // -10.0 m/s^2
-          // }else if ( set_vel < ref_vel_mph*mph2mps){
-          //     std::cout << "All is well~ speed up" << std::endl;
-          //     set_vel += 8.0 * T_sample; // 10.0 m/s^2
-          // }
-          // std::cout << "set_vel = " << set_vel*mps2mph << " mph" << std::endl;
-
           if (front_car_id >= 0){
               std::cout << "Car overhead!! slow down" << std::endl;
               set_vel = front_car_speed;
