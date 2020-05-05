@@ -155,6 +155,7 @@ int main() {
           double ref_y = car_y;
           double ref_yaw = deg2rad(car_yaw);
           double end_path_speed = car_speed;
+          std::cout << "car_yaw = " << car_yaw << std::endl;
           //
           double ref_x_pre = ref_x;
           double ref_y_pre = ref_y;
@@ -171,9 +172,9 @@ int main() {
               }
           }
           // Assign the ref. values
-          if (is_faking_ref){
-              ref_x_pre = car_x - cos(car_yaw);
-              ref_y_pre = car_y - sin(car_yaw);
+          if (prev_size < 2){
+              ref_x_pre = car_x - cos(ref_yaw);
+              ref_y_pre = car_y - sin(ref_yaw);
           }else{
               // Redefine reference states as previous path end point
               ref_s = end_path_s;
@@ -185,16 +186,23 @@ int main() {
               ref_y_pre = previous_path_y[prev_size-2];
               double _delta_x = fabs(ref_x - ref_x_pre);
               double _delta_y = fabs(ref_y - ref_y_pre);
-              int pre_i = prev_size-2;
-              while ( (_delta_x+_delta_y) < 0.001 && pre_i > 0){ // unit: m
-                  pre_i -= 1;
+              int pre_i = (prev_size-2) - 1;
+              while ( (_delta_x+_delta_y) < 0.001 && pre_i >= 0){ // unit: m
                   ref_x_pre = previous_path_x[pre_i];
                   ref_y_pre = previous_path_y[pre_i];
                   _delta_x = fabs(ref_x - ref_x_pre);
                   _delta_y = fabs(ref_y - ref_y_pre);
+                  pre_i -= 1;
               }
-              //
-              ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+              if (pre_i < 0){
+                  ref_yaw = deg2rad(car_yaw);
+                  ref_x_pre = car_x - cos(ref_yaw);
+                  ref_y_pre = car_y - sin(ref_yaw);
+              }else{
+                  ref_yaw = atan2(ref_y - ref_y_pre, ref_x - ref_x_pre);
+              }
+              pre_i += 1; // The true index of the ref_x_pre and ref_y_pre
+
               end_path_speed = distance(ref_x, ref_y, ref_x_pre, ref_y_pre)/(T_sample * double(prev_size-1 - pre_i));
           }
           //---------------------------------//
