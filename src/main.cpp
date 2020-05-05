@@ -96,7 +96,7 @@ int main() {
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy,
                &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
-               &T_sample,&lane_width,&car_width,&accel_max,&accel_min,
+               &T_sample,&lane_width,&car_width,&car_length,&accel_max,&accel_min,
                &ref_vel_mph,&lane,&set_vel]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
@@ -327,7 +327,7 @@ int main() {
                       //-----------------------------//
                       for (size_t k=0; k < c_obj_s.size(); ++k){
                           double dist_s = fabs(c_obj_s[k] - a_pos_s[i]);
-                          double dist_d = fabs(c_obj_d[k] - d_pos_s[i]);
+                          double dist_d = fabs(c_obj_d[k] - a_pos_d[i]);
                           if ( dist_s <= car_length && dist_d <= car_width){
                               a_is_collided[i] = true;
                               break; // Save calculation
