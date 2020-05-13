@@ -71,6 +71,7 @@ int main() {
   double car_length = 15.0; // m, 5.0 + 5.0*2 (margin)
   //
   double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  // double ref_vel_mph = 80.0; // 49.5; // mph
   // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
@@ -436,6 +437,7 @@ int main() {
               // Make decision (choose action)
               // Choose lane (the speed will be determined later)
               if (lane_id_max < 0){
+              // if (false){
                   // All choise resulted in collision, just stay in the current lane and try it's best in braking
                   dec_lane = lane;
                   // dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
@@ -479,9 +481,11 @@ int main() {
                   // Change speed
                   if (frontal_car_id >= 0){
                       // There is a frontal car, slow down
+                      std::cout << "--------ACC--------" << std::endl;
                       dec_speed = frontal_car_vel;
                   }else{
                       // No frontal car, go at maximum speed
+                      std::cout << "-----Max speed-----" << std::endl;
                       dec_speed = (ref_vel_mph*mph2mps);
                   }
               }
