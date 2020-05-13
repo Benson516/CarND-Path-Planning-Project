@@ -289,10 +289,10 @@ int main() {
           {
               double T_sim_horizon = 3.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
-              // Other cars
-              std::vector<double> c_obj_s;
-              std::vector<double> c_obj_d;
-              std::vector<double> c_obj_speed;
+              // Other cars (for simulation and it original states)
+              std::vector<double> c_obj_s, c_obj_s_ori;
+              std::vector<double> c_obj_d, c_obj_d_ori;
+              std::vector<double> c_obj_speed, c_obj_speed_ori;
               // Initialize the cars' status at (prev_size*T_sample) ahead of current time
               // Put all the sensed car into the lists
               for (size_t i=0; i < sensor_fusion.size(); ++i){
@@ -310,7 +310,10 @@ int main() {
                     c_obj_d.push_back( d );
                     c_obj_speed.push_back( check_speed );
               }
-
+              // Keep the original state
+              c_obj_s_ori = c_obj_s;
+              c_obj_d_ori = c_obj_d;
+              c_obj_speed_ori = c_obj_speed;
               //
               size_t N_lane = 3;
               double target_s = ref_s + 30.0; // 30.0 m ahead
@@ -352,7 +355,7 @@ int main() {
                           double frontal_car_s = 0.0;
                           double frontal_car_vel = 0.0;
                           for (size_t k=0; k < c_obj_s.size(); ++k){
-                              double delta_s = c_obj_d[k] - a_pos_d[i];
+                              double delta_s = c_obj_s[k] - a_pos_s[i];
                               if ( delta_s < 0.0 || delta_s > 30.0){
                                   continue;
                               }
@@ -457,12 +460,12 @@ int main() {
                   int frontal_car_id = -1;
                   double frontal_car_s = 0.0;
                   double frontal_car_vel = 0.0;
-                  for (size_t k=0; k < c_obj_s.size(); ++k){
-                      double delta_s = c_obj_d[k] - a_pos_d[i];
+                  for (size_t k=0; k < c_obj_s_ori.size(); ++k){
+                      double delta_s = c_obj_s_ori[k] - ref_s;
                       if ( delta_s < 0.0 || delta_s > 30.0){
                           continue;
                       }
-                      double dist_d = fabs(c_obj_d[k] - a_pos_d[i]);
+                      double dist_d = fabs(c_obj_d_ori[k] - ref_d);
                       if ( dist_d >= car_width){
                           continue;
                       }
@@ -470,10 +473,9 @@ int main() {
                       if ( delta_s < frontal_car_s || frontal_car_id < 0){
                           frontal_car_s = delta_s;
                           frontal_car_id = k;
-                          frontal_car_vel = c_obj_speed[k];
+                          frontal_car_vel = c_obj_speed_ori[k];
                       }
                   }
-                  double speed_i_pre = sqrt(a_vel_s[i]*a_vel_s[i] + a_vel_d[i]*a_vel_d[i]);
                   // Change speed
                   if (frontal_car_id >= 0){
                       // There is a frontal car, slow down
