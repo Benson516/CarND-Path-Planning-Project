@@ -321,15 +321,17 @@ int main() {
               // States of each action
               std::vector<double> a_pos_s(N_lane, ref_s);
               std::vector<double> a_pos_d(N_lane, ref_d);
-              std::vector<double> a_vel_s(N_lane);
-              std::vector<double> a_vel_d(N_lane);
+              std::vector<double> a_vel_magnitude(N_lane);
+              std::vector<double> a_vel_angle(N_lane);
+              std::vector<double> a_set_vel(N_lane);
               std::vector<bool> a_is_lane_reached(N_lane, false);
               // Initialize the velocity of ego car toward each lane's target
               for (size_t i=0; i < N_lane; ++i){
                   double target_d_i = lane_to_d(i, lane_width);
                   double target_angle = atan2((target_d_i-a_pos_d[i]) , (target_s-a_pos_s[i]));
-                  a_vel_s[i] = end_path_speed * cos(target_angle);
-                  a_vel_d[i] = end_path_speed * sin(target_angle);
+                  a_vel_magnitude[i] = end_path_speed;
+                  a_vel_angle[i] = target_angle;
+                  a_set_vel[i] = set_vel; // Previous set_vel
               }
 
               // Marke if the action resulted in collision
@@ -371,36 +373,36 @@ int main() {
                                   frontal_car_vel = c_obj_speed[k];
                               }
                           }
-                          double speed_i_pre = sqrt(a_vel_s[i]*a_vel_s[i] + a_vel_d[i]*a_vel_d[i]);
-                          double sim_set_speed_pre = 0.0;
+                          // Decide the set_vel for this action
                           if (frontal_car_id >= 0){
                               // There is a frontal car, slow down
-                              sim_set_speed_pre = frontal_car_vel;
+                              a_set_vel[i] = frontal_car_vel;
                           }else{
                               // No frontal car, go at maximum speed
-                              sim_set_speed_pre = (ref_vel_mph*mph2mps);
+                              a_set_vel[i] = (ref_vel_mph*mph2mps);
                           }
-                          // Change simulation speed
-                          if ( speed_i_pre > 0.001){
-                              double ratio = sim_set_speed_pre/speed_i_pre;
-                              a_vel_s[i] *= ratio;
-                              a_vel_d[i] *= ratio;
-                          }else{
-                              a_vel_s[i] = sim_set_speed_pre;
-                              a_vel_d[i] = 0.0;
-                          }
+                          //
                       }
                       //--------//
-                      a_pos_s[i] += dT_sim * a_vel_s[i];
-                      a_pos_d[i] += dT_sim * a_vel_d[i];
+                      // Update speed
+                      double delta_speed = a_set_vel[i] - a_vel_magnitude[i];
+                      if (delta_speed > accel_max * dT_sim)
+                           delta_speed = accel_max * dT_sim;
+                      else if (delta_speed < accel_min * dT_sim) // Note: accel_min < 0.0
+                           delta_speed = accel_min * dT_sim;
+                      // Update speed, if abs(delta_speed) is too small,
+                      // the speed will become set_vel (speed <- set_vel)
+                      a_vel_magnitude[i] += delta_speed;
+                      
+                      // Update pose
+                      a_pos_s[i] += dT_sim * ( a_vel_magnitude[i] * cos(a_vel_angle[i]) );
+                      a_pos_d[i] += dT_sim * ( a_vel_magnitude[i] * sin(a_vel_angle[i]) );
                       // Check if the target lane reached
                       if (!a_is_lane_reached[i]){
                           if ( fabs(a_pos_d[i] - ref_d) >= fabs(double(i-lane))*lane_width ){
                               a_is_lane_reached[i] = true;
                               // Go straigntly forward
-                              double _speed = sqrt(a_vel_s[i]*a_vel_s[i] + a_vel_d[i]*a_vel_d[i]);
-                              a_vel_s[i] = _speed;
-                              a_vel_d[i] = 0.0;
+                              a_vel_angle[i] = 0.0;
                           }
                       }
                       //-----------------------------//
