@@ -393,7 +393,7 @@ int main() {
                       // Update speed, if abs(delta_speed) is too small,
                       // the speed will become set_vel (speed <- set_vel)
                       a_vel_magnitude[i] += delta_speed;
-                      
+
                       // Update pose
                       a_pos_s[i] += dT_sim * ( a_vel_magnitude[i] * cos(a_vel_angle[i]) );
                       a_pos_d[i] += dT_sim * ( a_vel_magnitude[i] * sin(a_vel_angle[i]) );
@@ -425,7 +425,7 @@ int main() {
               int lane_id_max = -1;
               double ds_max = 0.0;
               for (size_t i=0; i < N_lane; ++i){
-                  std::cout << "action #" << i << ": delta_s = " << (a_pos_s[i] - ref_s) << ",\tcolided=" << a_is_collided[i] << std::endl;
+                  std::cout << "action #" << i << ": delta_s = " << (a_pos_s[i] - ref_s) << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
                   if ( !a_is_collided[i] ){
                       // We have to make sure that there is no collision
                       if ( (a_pos_s[i] - ref_s) > ds_max || lane_id_max < 0){
