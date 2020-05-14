@@ -71,6 +71,7 @@ int main() {
   double car_length = 15.0; // m, 5.0 + 5.0*2 (margin)
   //
   double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  // double ref_vel_mph = 80.0; // 49.5; // mph
   // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
@@ -289,10 +290,10 @@ int main() {
           {
               double T_sim_horizon = 3.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
-              // Other cars
-              std::vector<double> c_obj_s;
-              std::vector<double> c_obj_d;
-              std::vector<double> c_obj_speed;
+              // Other cars (for simulation and it original states)
+              std::vector<double> c_obj_s, c_obj_s_ori;
+              std::vector<double> c_obj_d, c_obj_d_ori;
+              std::vector<double> c_obj_speed, c_obj_speed_ori;
               // Initialize the cars' status at (prev_size*T_sample) ahead of current time
               // Put all the sensed car into the lists
               for (size_t i=0; i < sensor_fusion.size(); ++i){
@@ -310,24 +311,30 @@ int main() {
                     c_obj_d.push_back( d );
                     c_obj_speed.push_back( check_speed );
               }
-
+              // Keep the original state
+              c_obj_s_ori = c_obj_s;
+              c_obj_d_ori = c_obj_d;
+              c_obj_speed_ori = c_obj_speed;
               //
               size_t N_lane = 3;
               double target_s = ref_s + 30.0; // 30.0 m ahead
               // States of each action
               std::vector<double> a_pos_s(N_lane, ref_s);
               std::vector<double> a_pos_d(N_lane, ref_d);
-              std::vector<double> a_vel_s(N_lane);
-              std::vector<double> a_vel_d(N_lane);
+              std::vector<double> a_vel_magnitude(N_lane);
+              std::vector<double> a_vel_angle(N_lane);
+              std::vector<double> a_set_vel(N_lane);
               std::vector<bool> a_is_lane_reached(N_lane, false);
               // Initialize the velocity of ego car toward each lane's target
               for (size_t i=0; i < N_lane; ++i){
                   double target_d_i = lane_to_d(i, lane_width);
                   double target_angle = atan2((target_d_i-a_pos_d[i]) , (target_s-a_pos_s[i]));
-                  a_vel_s[i] = end_path_speed * cos(target_angle);
-                  a_vel_d[i] = end_path_speed * sin(target_angle);
+                  a_vel_magnitude[i] = end_path_speed;
+                  a_vel_angle[i] = target_angle;
+                  a_set_vel[i] = set_vel; // Previous set_vel
               }
 
+              // Marke if the action resulted in collision
               std::vector<bool> a_is_collided(N_lane, false);
               // Loop forward time
               for (double _t = dT_sim; _t < T_sim_horizon; _t += dT_sim){
@@ -342,18 +349,60 @@ int main() {
                           continue;
                       }
 
-                      // Move one step
+                      // Ego car move one step
                       //-----------------------------//
-                      a_pos_s[i] += dT_sim * a_vel_s[i];
-                      a_pos_d[i] += dT_sim * a_vel_d[i];
+                      // Check if there is close frontal car
+                      //--------//
+                      {
+                          int frontal_car_id = -1;
+                          double frontal_car_s = 0.0;
+                          double frontal_car_vel = 0.0;
+                          for (size_t k=0; k < c_obj_s.size(); ++k){
+                              double delta_s = c_obj_s[k] - a_pos_s[i];
+                              if ( delta_s < 0.0 || delta_s > 30.0){
+                                  continue;
+                              }
+                              double dist_d = fabs(c_obj_d[k] - a_pos_d[i]);
+                              if ( dist_d >= car_width){
+                                  continue;
+                              }
+                              //
+                              if ( delta_s < frontal_car_s || frontal_car_id < 0){
+                                  frontal_car_s = delta_s;
+                                  frontal_car_id = k;
+                                  frontal_car_vel = c_obj_speed[k];
+                              }
+                          }
+                          // Decide the set_vel for this action
+                          if (frontal_car_id >= 0){
+                              // There is a frontal car, slow down
+                              a_set_vel[i] = frontal_car_vel;
+                          }else{
+                              // No frontal car, go at maximum speed
+                              a_set_vel[i] = (ref_vel_mph*mph2mps);
+                          }
+                          //
+                      }
+                      //--------//
+                      // Update speed
+                      double delta_speed = a_set_vel[i] - a_vel_magnitude[i];
+                      if (delta_speed > accel_max * dT_sim)
+                           delta_speed = accel_max * dT_sim;
+                      else if (delta_speed < accel_min * dT_sim) // Note: accel_min < 0.0
+                           delta_speed = accel_min * dT_sim;
+                      // Update speed, if abs(delta_speed) is too small,
+                      // the speed will become set_vel (speed <- set_vel)
+                      a_vel_magnitude[i] += delta_speed;
+
+                      // Update pose
+                      a_pos_s[i] += dT_sim * ( a_vel_magnitude[i] * cos(a_vel_angle[i]) );
+                      a_pos_d[i] += dT_sim * ( a_vel_magnitude[i] * sin(a_vel_angle[i]) );
                       // Check if the target lane reached
                       if (!a_is_lane_reached[i]){
                           if ( fabs(a_pos_d[i] - ref_d) >= fabs(double(i-lane))*lane_width ){
                               a_is_lane_reached[i] = true;
                               // Go straigntly forward
-                              double _speed = sqrt(a_vel_s[i]*a_vel_s[i] + a_vel_d[i]*a_vel_d[i]);
-                              a_vel_s[i] = _speed;
-                              a_vel_d[i] = 0.0;
+                              a_vel_angle[i] = 0.0;
                           }
                       }
                       //-----------------------------//
@@ -376,7 +425,7 @@ int main() {
               int lane_id_max = -1;
               double ds_max = 0.0;
               for (size_t i=0; i < N_lane; ++i){
-                  std::cout << "action #" << i << ": delta_s = " << (a_pos_s[i] - ref_s) << ",\tcolided=" << a_is_collided[i] << std::endl;
+                  std::cout << "action #" << i << ": delta_s = " << (a_pos_s[i] - ref_s) << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
                   if ( !a_is_collided[i] ){
                       // We have to make sure that there is no collision
                       if ( (a_pos_s[i] - ref_s) > ds_max || lane_id_max < 0){
@@ -388,26 +437,65 @@ int main() {
               //
 
               // Make decision (choose action)
+              // Choose lane (the speed will be determined later)
               if (lane_id_max < 0){
+              // if (false){
                   // All choise resulted in collision, just stay in the current lane and try it's best in braking
                   dec_lane = lane;
-                  dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
+                  // dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
               }else{
                   // We got a best lane to go (go further during specified time period)
                   if ( (lane_id_max-lane) > 0 ){
                       dec_lane = lane + 1; // Change one lane a time, no matter how far the lane we actually want
-                      dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
+                      // dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
                   }else if ( (lane_id_max-lane) < 0 ){
                       dec_lane = lane - 1;
-                      dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
+                      // dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
                   }else{
                       // Equal
                       dec_lane = lane;
-                      dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
+                      // dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
                   }
               }
-              //
+
+              // Check if there is close frontal car and decide speed
+              //--------//
+              {
+                  int frontal_car_id = -1;
+                  double frontal_car_s = 0.0;
+                  double frontal_car_vel = 0.0;
+                  for (size_t k=0; k < c_obj_s_ori.size(); ++k){
+                      double delta_s = c_obj_s_ori[k] - ref_s;
+                      if ( delta_s < 0.0 || delta_s > 30.0){
+                          continue;
+                      }
+                      double dist_d = fabs(c_obj_d_ori[k] - ref_d);
+                      if ( dist_d >= car_width){
+                          continue;
+                      }
+                      //
+                      if ( delta_s < frontal_car_s || frontal_car_id < 0){
+                          frontal_car_s = delta_s;
+                          frontal_car_id = k;
+                          frontal_car_vel = c_obj_speed_ori[k];
+                      }
+                  }
+                  // Change speed
+                  if (frontal_car_id >= 0){
+                      // There is a frontal car, slow down
+                      std::cout << "--------ACC--------" << std::endl;
+                      dec_speed = frontal_car_vel;
+                  }else{
+                      // No frontal car, go at maximum speed
+                      std::cout << "-----Max speed-----" << std::endl;
+                      dec_speed = (ref_vel_mph*mph2mps);
+                  }
+              }
+              //--------//
+              // end Check if there is close frontal car and decide speed
           }
+
+          // Update targets
           lane = dec_lane;
           set_vel = dec_speed;
           //-----------//
