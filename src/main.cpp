@@ -68,17 +68,21 @@ int main() {
   double T_sample = 0.02; // 20 ms, sampling period
   double lane_width = 4.0; // m
   double car_width = 3.5; // 2.5; // m, 3.0 + 0.5 (margin)
-  double car_length = 9.0; // m, 5.0 + 2.0*2 (margin)
+  double car_length = 7.0; // m, 5.0 + 2.0*2 (margin)
+  //
+  double delta_uncertainty_s = 2.0; // m/sec.
+  double delta_uncertainty_d = 0.2; // m/sec.
   //
   // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
-  // double ref_vel_mph = 80.0; // 49.5; // mph
-  double ref_vel_mph = 200; // 49.5; // mph
+  double ref_vel_mph = 80.0; // 49.5; // mph
+  // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
+  //
   double safe_distance_factor_max = 2.0;
   double safe_distance_factor_min = 1.1;
-  double safe_distance_margin = 2.0; // m
+  double safe_distance_margin = 7.0; // m
   //---------------------//
 
   // Variables
@@ -87,6 +91,9 @@ int main() {
   // The set speed, m/s <-- This is the speed our car forced to "follow" (track) because of traffic
   // double set_vel = ref_vel_mph * mph2mps; // m/s
   double set_vel = 0.0; // m/s
+  // Previous decisions made
+  int dec_lane = lane;
+  double dec_speed = set_vel;
   //---------------------//
 
   // Global fine maps
@@ -100,9 +107,10 @@ int main() {
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy,
                &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
-               &T_sample,&lane_width,&car_width,&car_length,&accel_max,&accel_min,
+               &T_sample,&lane_width,&car_width,&car_length,&delta_uncertainty_s,&delta_uncertainty_d,
+               &accel_max,&accel_min,
                &safe_distance_factor_max,&safe_distance_factor_min,&safe_distance_margin,
-               &ref_vel_mph,&lane,&set_vel]
+               &ref_vel_mph,&lane,&set_vel,&dec_lane,&dec_speed]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -141,12 +149,14 @@ int main() {
 
 
 
+          std::cout << "-------------------------------" << std::endl;
 
           //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
-          if ( prev_size > 10){
-              prev_size = 10;
+          size_t keep_prev_size = 30;
+          if ( prev_size > keep_prev_size){
+              prev_size = keep_prev_size;
           }
           vector<double> next_x_vals;
           vector<double> next_y_vals;
@@ -289,10 +299,9 @@ int main() {
           // Sample and simulation for each action
           //-----------//
           // The following variables are the output of the decision-making module
-          int dec_lane = lane;
-          double dec_speed = set_vel;
+          // dec_lane, dec_speed
           {
-              double T_sim_horizon = 3.0; // sec.
+              double T_sim_horizon = 5.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
               // Other cars (for simulation and it original states)
               std::vector<double> c_obj_s, c_obj_s_ori;
@@ -426,8 +435,8 @@ int main() {
                       // Check collision
                       //-----------------------------//
                       for (size_t k=0; k < c_obj_s.size(); ++k){
-                          double dist_s = fabs(c_obj_s[k] - a_pos_s[i]) + _t*2.0;
-                          double dist_d = fabs(c_obj_d[k] - a_pos_d[i]) + _t*0.2;
+                          double dist_s = fabs(c_obj_s[k] - a_pos_s[i]) - _t*delta_uncertainty_s;
+                          double dist_d = fabs(c_obj_d[k] - a_pos_d[i]) - _t*delta_uncertainty_d;
                           if ( dist_s <= car_length && dist_d <= car_width){
                               a_is_collided[i] = true;
                               break; // Save calculation time
@@ -445,19 +454,19 @@ int main() {
                   std::cout << "action #" << i << ": delta_s = " << delta_s << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
                   // if ( !a_is_collided[i] ){
                   //     // We have to make sure that there is no collision
-                  //     if ( (a_pos_s[i] - ref_s) > ds_max || lane_id_max < 0){
+                  //     if ( delta_s > ds_max || lane_id_max < 0){
                   //         lane_id_max = i;
-                  //         ds_max = (a_pos_s[i] - ref_s);
+                  //         ds_max = delta_s;
                   //     }
                   // }
 
                   // Add prompt for optimizer that should make consistence decision as the previous one
-                  if (i == lane){
-                      if ( !a_is_collided[i] ){
-                          delta_s += 5.0; // More likely to keep in the same lane
-                      }
-                  }
-                  //
+                  // if (i == dec_lane){
+                  //     // if ( !a_is_collided[i] ){
+                  //     //     delta_s += 10.0; // More likely to keep in the same lane
+                  //     // }
+                  //     delta_s += 10.0; // More likely to keep in the same lane
+                  // }
                   if ( delta_s > ds_max || lane_id_max < 0){
                       lane_id_max = i;
                       ds_max = delta_s;
@@ -470,21 +479,12 @@ int main() {
               if (lane_id_max < 0){
               // if (false){
                   // All choise resulted in collision, just stay in the current lane and try it's best in braking
-                  dec_lane = lane;
+                  // dec_lane = lane;
+                  dec_lane = dec_lane;
                   // dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
               }else{
                   // We got a best lane to go (go further during specified time period)
-                  if ( (lane_id_max-lane) > 0 ){
-                      dec_lane = lane + 1; // Change one lane a time, no matter how far the lane we actually want
-                      // dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
-                  }else if ( (lane_id_max-lane) < 0 ){
-                      dec_lane = lane - 1;
-                      // dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
-                  }else{
-                      // Equal
-                      dec_lane = lane;
-                      // dec_speed = ref_vel_mph*mph2mps; // TODO: modify this
-                  }
+                  dec_lane = lane_id_max;
               }
 
               // Check if there is close frontal car and decide speed
@@ -540,7 +540,16 @@ int main() {
           }
 
           // Update targets
-          lane = dec_lane;
+          if ( (dec_lane-lane) > 0 ){
+              lane += 1; // Change one lane a time, no matter how far the lane we actually want
+          }else if ( (dec_lane-lane) < 0 ){
+              lane -= 1;
+          }// else keep as the previous one
+          // if (lane > 2){
+          //     lane = 2;
+          // }else if (lane < 0){
+          //     lane = 0;
+          // }
           set_vel = dec_speed;
           //-----------//
 
