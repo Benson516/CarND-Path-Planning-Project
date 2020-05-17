@@ -301,7 +301,7 @@ int main() {
           // The following variables are the output of the decision-making module
           // dec_lane, dec_speed
           {
-              double T_sim_horizon = 5.0; // sec.
+              double T_sim_horizon = 3.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
               // Other cars (for simulation and it original states)
               std::vector<double> c_obj_s, c_obj_s_ori;
@@ -435,8 +435,8 @@ int main() {
                       // Check collision
                       //-----------------------------//
                       for (size_t k=0; k < c_obj_s.size(); ++k){
-                          double dist_s = fabs(c_obj_s[k] - a_pos_s[i]) - _t*delta_uncertainty_s;
-                          double dist_d = fabs(c_obj_d[k] - a_pos_d[i]) - _t*delta_uncertainty_d;
+                          double dist_s = fabs(c_obj_s[k] - a_pos_s[i]); //  - _t*delta_uncertainty_s;
+                          double dist_d = fabs(c_obj_d[k] - a_pos_d[i]); //  - _t*delta_uncertainty_d;
                           if ( dist_s <= car_length && dist_d <= car_width){
                               a_is_collided[i] = true;
                               break; // Save calculation time
@@ -479,8 +479,8 @@ int main() {
               if (lane_id_max < 0){
               // if (false){
                   // All choise resulted in collision, just stay in the current lane and try it's best in braking
-                  // dec_lane = lane;
-                  dec_lane = dec_lane;
+                  dec_lane = lane;
+                  // dec_lane = dec_lane;
                   // dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
               }else{
                   // We got a best lane to go (go further during specified time period)
