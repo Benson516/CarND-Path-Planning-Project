@@ -155,7 +155,7 @@ int main() {
           //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
-          size_t keep_prev_size = 30;
+          size_t keep_prev_size = 10;
           if ( prev_size > keep_prev_size){
               prev_size = keep_prev_size;
           }
@@ -302,7 +302,7 @@ int main() {
           // The following variables are the output of the decision-making module
           // dec_lane, dec_speed
           {
-              double T_sim_horizon = 3.0; // sec.
+              double T_sim_horizon = 10.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
               // Other cars (for simulation and it original states)
               std::vector<double> c_obj_s, c_obj_s_ori;
@@ -428,7 +428,10 @@ int main() {
                       a_pos_d[i] += dT_sim * ( a_vel_magnitude[i] * sin(a_vel_angle[i]) );
                       // Check if the target lane reached
                       if (!a_is_lane_reached[i]){
-                          if ( fabs(a_pos_d[i] - ref_d) >= fabs(double(i-lane))*lane_width ){
+                          int current_lane = d_to_lane(ref_d, lane_width);
+                          double lane_center_d = lane_to_d(current_lane, lane_width);
+                          double offset = ref_d - lane_center_d;
+                          if ( fabs(a_pos_d[i] - ref_d) >= fabs(double(i-current_lane)*lane_width - offset) ){
                               a_is_lane_reached[i] = true;
                               // Go straigntly forward
                               a_vel_angle[i] = 0.0;
@@ -457,6 +460,7 @@ int main() {
               for (size_t i=0; i < N_lane; ++i){
                   double delta_s_raw = (a_pos_s[i] - ref_s);
                   filtered_delta_s_list[i] += 0.1*(delta_s_raw - filtered_delta_s_list[i]);
+                  // double delta_s = delta_s_raw;
                   double delta_s = filtered_delta_s_list[i];
                   std::cout << "action #" << i << ": filtered_delta_s = " << delta_s << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
                   // if ( !a_is_collided[i] ){
