@@ -359,7 +359,7 @@ int main() {
                           double frontal_car_vel = 0.0;
                           for (size_t k=0; k < c_obj_s.size(); ++k){
                               double delta_s = c_obj_s[k] - a_pos_s[i];
-                              if ( delta_s < 0.0 || delta_s > 30.0){
+                              if ( delta_s < 0.0 ){
                                   continue;
                               }
                               double dist_d = fabs(c_obj_d[k] - a_pos_d[i]);
@@ -375,8 +375,17 @@ int main() {
                           }
                           // Decide the set_vel for this action
                           if (frontal_car_id >= 0){
-                              // There is a frontal car, slow down
-                              a_set_vel[i] = frontal_car_vel;
+                              double min_brake_distance = get_min_brake_distance(a_vel_magnitude[i], frontal_car_vel, acce_min);
+                              if ( min_brake_distance < 0.0 || frontal_car_s > 1.5*min_brake_distance){
+                                  // Frontal car goes at higer speed than we do,
+                                  // Or we still have some room to get closer
+                                  // just go at maximum speed
+                                  a_set_vel[i] = (ref_vel_mph*mph2mps);
+                              }else{
+                                  // There is a frontal car which is too close, slow down
+                                  a_set_vel[i] = frontal_car_vel;
+                              }
+
                           }else{
                               // No frontal car, go at maximum speed
                               a_set_vel[i] = (ref_vel_mph*mph2mps);
@@ -466,7 +475,7 @@ int main() {
                   double frontal_car_vel = 0.0;
                   for (size_t k=0; k < c_obj_s_ori.size(); ++k){
                       double delta_s = c_obj_s_ori[k] - ref_s;
-                      if ( delta_s < 0.0 || delta_s > 30.0){
+                      if ( delta_s < 0.0){
                           continue;
                       }
                       double dist_d = fabs(c_obj_d_ori[k] - ref_d);
@@ -482,9 +491,18 @@ int main() {
                   }
                   // Change speed
                   if (frontal_car_id >= 0){
-                      // There is a frontal car, slow down
-                      std::cout << "--------ACC--------" << std::endl;
-                      dec_speed = frontal_car_vel;
+                      double min_brake_distance = get_min_brake_distance(end_path_speed, frontal_car_vel, acce_min);
+                      if ( min_brake_distance < 0.0 || frontal_car_s > 1.5*min_brake_distance){
+                          // Frontal car goes at higer speed than we do,
+                          // Or we still have some room to get closer
+                          // just go at maximum speed
+                          std::cout << "-----Max speed-----" << std::endl;
+                          dec_speed = (ref_vel_mph*mph2mps);
+                      }else{
+                          // There is a frontal car which is too close, slow down
+                          std::cout << "--------ACC--------" << std::endl;
+                          dec_speed = frontal_car_vel;
+                      }
                   }else{
                       // No frontal car, go at maximum speed
                       std::cout << "-----Max speed-----" << std::endl;
