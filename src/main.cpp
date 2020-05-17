@@ -375,7 +375,7 @@ int main() {
                           }
                           // Decide the set_vel for this action
                           if (frontal_car_id >= 0){
-                              double min_brake_distance = get_min_brake_distance(a_vel_magnitude[i], frontal_car_vel, acce_min);
+                              double min_brake_distance = get_min_brake_distance(a_vel_magnitude[i], frontal_car_vel, accel_min);
                               if ( min_brake_distance < 0.0 || frontal_car_s > 1.5*min_brake_distance){
                                   // Frontal car goes at higer speed than we do,
                                   // Or we still have some room to get closer
@@ -491,7 +491,7 @@ int main() {
                   }
                   // Change speed
                   if (frontal_car_id >= 0){
-                      double min_brake_distance = get_min_brake_distance(end_path_speed, frontal_car_vel, acce_min);
+                      double min_brake_distance = get_min_brake_distance(end_path_speed, frontal_car_vel, accel_min);
                       if ( min_brake_distance < 0.0 || frontal_car_s > 1.5*min_brake_distance){
                           // Frontal car goes at higer speed than we do,
                           // Or we still have some room to get closer
