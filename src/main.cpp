@@ -94,6 +94,7 @@ int main() {
   // Previous decisions made
   int dec_lane = lane;
   double dec_speed = set_vel;
+  std::vector<double> filtered_delta_s_list;
   //---------------------//
 
   // Global fine maps
@@ -110,7 +111,7 @@ int main() {
                &T_sample,&lane_width,&car_width,&car_length,&delta_uncertainty_s,&delta_uncertainty_d,
                &accel_max,&accel_min,
                &safe_distance_factor_max,&safe_distance_factor_min,&safe_distance_margin,
-               &ref_vel_mph,&lane,&set_vel,&dec_lane,&dec_speed]
+               &ref_vel_mph,&lane,&set_vel,&dec_lane,&dec_speed,&filtered_delta_s_list]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -338,6 +339,9 @@ int main() {
               std::vector<double> a_vel_angle(N_lane);
               std::vector<double> a_set_vel(N_lane);
               std::vector<bool> a_is_lane_reached(N_lane, false);
+              if (filtered_delta_s_list.size() != N_lane){
+                  filtered_delta_s_list.resize(N_lane, 0.0);
+              }
               // Initialize the velocity of ego car toward each lane's target
               for (size_t i=0; i < N_lane; ++i){
                   double target_d_i = lane_to_d(i, lane_width);
@@ -449,23 +453,18 @@ int main() {
               // Find te largest traveling s
               int lane_id_max = -1;
               double ds_max = 0.0;
+
               for (size_t i=0; i < N_lane; ++i){
-                  double delta_s = (a_pos_s[i] - ref_s);
-                  std::cout << "action #" << i << ": delta_s = " << delta_s << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
+                  double delta_s_raw = (a_pos_s[i] - ref_s);
+                  filtered_delta_s_list[i] += 0.1*(delta_s_raw - filtered_delta_s_list[i]);
+                  double delta_s = filtered_delta_s_list[i];
+                  std::cout << "action #" << i << ": filtered_delta_s = " << delta_s << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
                   // if ( !a_is_collided[i] ){
                   //     // We have to make sure that there is no collision
                   //     if ( delta_s > ds_max || lane_id_max < 0){
                   //         lane_id_max = i;
                   //         ds_max = delta_s;
                   //     }
-                  // }
-
-                  // Add prompt for optimizer that should make consistence decision as the previous one
-                  // if (i == dec_lane){
-                  //     // if ( !a_is_collided[i] ){
-                  //     //     delta_s += 10.0; // More likely to keep in the same lane
-                  //     // }
-                  //     delta_s += 10.0; // More likely to keep in the same lane
                   // }
                   if ( delta_s > ds_max || lane_id_max < 0){
                       lane_id_max = i;
