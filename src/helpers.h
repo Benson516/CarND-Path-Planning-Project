@@ -309,6 +309,14 @@ bool get_local_fine_map( double car_x, double car_y,
     return true;
 }
 
+double lane_to_d(int lane, double lane_width){
+    return lane_width*(double(lane) + 0.5);
+}
+
+int d_to_lane(double d, double lane_width){
+    return int(floor(d/lane_width));
+}
+
 double get_min_brake_distance(double ego_car_vel, double frontal_car_vel, double accel_min){
     if (frontal_car_vel >= ego_car_vel){
         return -1.0;

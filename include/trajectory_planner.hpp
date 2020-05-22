@@ -97,12 +97,3 @@ double get_JMT_value(double T, const std::vector<double> &params){
     }
     return result;
 }
-
-
-double lane_to_d(int lane, double lane_width){
-    return lane_width*(double(lane) + 0.5);
-}
-
-int d_to_lane(double d, double lane_width){
-    return int(floor(d/lane_width));
-}
