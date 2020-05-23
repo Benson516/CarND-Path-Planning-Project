@@ -317,7 +317,7 @@ int main() {
                       a_set_vel[i] = cal_proper_speed(c_obj_s,
                                                       c_obj_d,
                                                       c_obj_speed,
-                                                      a_pos_s[i], a_pos_d[i], (a_vel_magnitude[i]*cos(a_vel_angle[i]),
+                                                      a_pos_s[i], a_pos_d[i], (a_vel_magnitude[i]*cos(a_vel_angle[i])),
                                                       (ref_vel_mph*mph2mps),
                                                       car_width, car_length, accel_min,
                                                       safe_distance_margin,
@@ -375,8 +375,8 @@ int main() {
               for (size_t i=0; i < N_lane; ++i){
                   double delta_s_raw = (a_pos_s[i] - ref_s);
                   filtered_delta_s_list[i] += 0.1*(delta_s_raw - filtered_delta_s_list[i]);
-                  // double delta_s = delta_s_raw;
-                  double delta_s = filtered_delta_s_list[i];
+                  double delta_s = delta_s_raw;
+                  // double delta_s = filtered_delta_s_list[i];
                   std::cout << "action #" << i << ": filtered_delta_s = " << delta_s << ",\t(end)speed=" << a_vel_magnitude[i]*mps2mph << "mph,\tcolided=" << a_is_collided[i] << std::endl;
                   // if ( !a_is_collided[i] ){
                   //     // We have to make sure that there is no collision
