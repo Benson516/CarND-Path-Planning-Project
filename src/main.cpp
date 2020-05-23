@@ -74,8 +74,8 @@ int main() {
   double delta_uncertainty_d = 0.2; // m/sec.
   //
   // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
-  double ref_vel_mph = 80.0; // 49.5; // mph
-  // double ref_vel_mph = 200; // 49.5; // mph
+  // double ref_vel_mph = 80.0; // 49.5; // mph
+  double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -165,7 +165,7 @@ int main() {
           //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
-          size_t keep_prev_size = 10;
+          size_t keep_prev_size = 6;
           if ( prev_size > keep_prev_size){
               prev_size = keep_prev_size;
           }
