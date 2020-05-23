@@ -152,6 +152,16 @@ int main() {
 
           std::cout << "-------------------------------" << std::endl;
 
+
+          // test, print sensor_fusion
+          for (size_t i=0; i < sensor_fusion.size(); ++i){
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx + vy*vy);
+              std::cout << "#" << i << "car's s = " << (double(sensor_fusion[i][5]) - car_s)
+              << "\tcar's v = " << check_speed << std::endl;
+          }
+
           //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
@@ -445,6 +455,10 @@ int main() {
                           double dist_s = fabs(c_obj_s[k] - a_pos_s[i]); //  - _t*delta_uncertainty_s;
                           double dist_d = fabs(c_obj_d[k] - a_pos_d[i]); //  - _t*delta_uncertainty_d;
                           if ( dist_s <= car_length && dist_d <= car_width){
+                              a_is_collided[i] = true;
+                              break; // Save calculation time
+                          }else if ( (c_obj_s[k] <= a_pos_s[i]) && (c_obj_s[k] > a_pos_s[i] - safe_distance_margin) && dist_d <= car_width){
+                              // The rear car is not within the safe distance with ego car
                               a_is_collided[i] = true;
                               break; // Save calculation time
                           }
