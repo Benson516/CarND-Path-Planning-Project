@@ -356,7 +356,7 @@ int main() {
                           if ( dist_s <= car_length && dist_d <= car_width){
                               a_is_collided[i] = true;
                               break; // Save calculation time
-                          }else if ( (c_obj_s[k] <= a_pos_s[i]) && (c_obj_s[k] > a_pos_s[i] - safe_distance_margin) && dist_d <= car_width){
+                          }else if ( (c_obj_s[k] <= a_pos_s[i]) && (c_obj_s[k] > a_pos_s[i] - (safe_distance_margin + car_length)) && dist_d <= car_width){
                               // The rear car is not within the safe distance with ego car
                               a_is_collided[i] = true;
                               break; // Save calculation time

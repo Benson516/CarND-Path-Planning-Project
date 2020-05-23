@@ -318,11 +318,11 @@ int d_to_lane(double d, double lane_width){
 }
 
 double get_min_brake_distance(double ego_car_vel, double frontal_car_vel, double accel_min){
-    if (frontal_car_vel >= ego_car_vel){
+    if (frontal_car_vel > ego_car_vel){
         return -1.0;
     }
     double delta_speed = ego_car_vel - frontal_car_vel;
-    double delta_t = delta_speed/(-accel_min);
+    double delta_t = delta_speed/fabs(accel_min);
     return (0.5*delta_speed*delta_t);
 }
 
