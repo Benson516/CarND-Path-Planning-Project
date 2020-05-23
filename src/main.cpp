@@ -234,6 +234,10 @@ int main() {
           //---------------------------------//
 
 
+
+
+
+
           // Behavior control
           //---------------------------------//
 
@@ -313,56 +317,13 @@ int main() {
                       a_set_vel[i] = cal_proper_speed(c_obj_s,
                                                       c_obj_d,
                                                       c_obj_speed,
-                                                      a_pos_s[i], a_pos_d[i], a_vel_magnitude[i],
+                                                      a_pos_s[i], a_pos_d[i], (a_vel_magnitude[i]*cos(a_vel_angle[i]),
                                                       (ref_vel_mph*mph2mps),
                                                       car_width, car_length, accel_min,
                                                       safe_distance_margin,
                                                       safe_distance_factor_max, safe_distance_factor_min,
                                                       false
                                                   );
-                      // {
-                      //     int frontal_car_id = -1;
-                      //     double frontal_car_s = 0.0;
-                      //     double frontal_car_vel = 0.0;
-                      //     for (size_t k=0; k < c_obj_s.size(); ++k){
-                      //         double delta_s = c_obj_s[k] - a_pos_s[i];
-                      //         if ( delta_s < 0.0 ){
-                      //             continue;
-                      //         }
-                      //         double dist_d = fabs(c_obj_d[k] - a_pos_d[i]);
-                      //         if ( dist_d >= car_width){
-                      //             continue;
-                      //         }
-                      //         //
-                      //         if ( delta_s < frontal_car_s || frontal_car_id < 0){
-                      //             frontal_car_s = delta_s;
-                      //             frontal_car_id = k;
-                      //             frontal_car_vel = c_obj_speed[k];
-                      //         }
-                      //     }
-                      //     // Decide the set_vel for this action
-                      //     if (frontal_car_id >= 0){
-                      //         double min_brake_distance = get_min_brake_distance(a_vel_magnitude[i], frontal_car_vel, accel_min);
-                      //         if ( min_brake_distance < 0.0 || (frontal_car_s-car_length-safe_distance_margin) > safe_distance_factor_max*min_brake_distance){
-                      //             // Frontal car goes at higer speed than we do,
-                      //             // Or we still have some room to get closer
-                      //             // just go at maximum speed
-                      //             a_set_vel[i] = (ref_vel_mph*mph2mps);
-                      //         }else if ((frontal_car_s-car_length-safe_distance_margin) > safe_distance_factor_min*min_brake_distance){
-                      //             // There is a frontal car which is too close, slow down
-                      //             a_set_vel[i] = frontal_car_vel;
-                      //         }else{
-                      //             // Too close, keep slowing down
-                      //             a_set_vel[i] = 0.0;
-                      //         }
-                      //
-                      //     }else{
-                      //         // No frontal car, go at maximum speed
-                      //         a_set_vel[i] = (ref_vel_mph*mph2mps);
-                      //     }
-                      //     //
-                      // }
-                      //--------//
                       // Update speed
                       double delta_speed = a_set_vel[i] - a_vel_magnitude[i];
                       if (delta_speed > accel_max * dT_sim)
@@ -438,7 +399,6 @@ int main() {
                   // All choise resulted in collision, just stay in the current lane and try it's best in braking
                   dec_lane = lane;
                   // dec_lane = dec_lane;
-                  // dec_speed = 30.0*mph2mps; // 0.0; // Decelerate to stop or go with low speed
               }else{
                   // We got a best lane to go (go further during specified time period)
                   dec_lane = lane_id_max;
@@ -456,54 +416,8 @@ int main() {
                                           safe_distance_factor_max, safe_distance_factor_min,
                                           true
                                           );
-              // {
-              //     int frontal_car_id = -1;
-              //     double frontal_car_s = 0.0;
-              //     double frontal_car_vel = 0.0;
-              //     for (size_t k=0; k < c_obj_s_ori.size(); ++k){
-              //         double delta_s = c_obj_s_ori[k] - ref_s;
-              //         if ( delta_s < 0.0){
-              //             continue;
-              //         }
-              //         double dist_d = fabs(c_obj_d_ori[k] - ref_d);
-              //         if ( dist_d >= car_width){
-              //             continue;
-              //         }
-              //         //
-              //         if ( delta_s < frontal_car_s || frontal_car_id < 0){
-              //             frontal_car_s = delta_s;
-              //             frontal_car_id = k;
-              //             frontal_car_vel = c_obj_speed_ori[k];
-              //         }
-              //     }
-              //     // Change speed
-              //     double min_brake_distance = get_min_brake_distance(end_path_speed, frontal_car_vel, accel_min);
-              //     std::cout << "min_brake_distance = " << min_brake_distance << std::endl;
-              //     if (frontal_car_id >= 0){
-              //         //
-              //         if ( min_brake_distance < 0.0 || (frontal_car_s-car_length-safe_distance_margin) > safe_distance_factor_max*min_brake_distance){
-              //             // Frontal car goes at higer speed than we do,
-              //             // Or we still have some room to get closer
-              //             // just go at maximum speed
-              //             std::cout << "-----Speed up------" << std::endl;
-              //             dec_speed = (ref_vel_mph*mph2mps);
-              //         }else if ((frontal_car_s-car_length-safe_distance_margin) > safe_distance_factor_min*min_brake_distance){
-              //             // There is a frontal car which is too close, slow down
-              //             std::cout << "--------ACC--------" << std::endl;
-              //             dec_speed = frontal_car_vel;
-              //         }else{
-              //             // Too close, keep slowing down
-              //             std::cout << "--------STOP-------" << std::endl;
-              //             dec_speed = 0.0;
-              //         }
-              //     }else{
-              //         // No frontal car, go at maximum speed
-              //         std::cout << "-----Max speed-----" << std::endl;
-              //         dec_speed = (ref_vel_mph*mph2mps);
-              //     }
-              // }
               //--------//
-              // end Check if there is close frontal car and decide speed
+
           }
 
           // Update targets
