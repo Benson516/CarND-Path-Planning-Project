@@ -312,6 +312,7 @@ int main() {
                       //--------//
                       a_set_vel[i] = cal_proper_speed(c_obj_s,
                                                       c_obj_d,
+                                                      c_obj_speed,
                                                       a_pos_s[i], a_pos_d[i], a_vel_magnitude[i],
                                                       (ref_vel_mph*mph2mps),
                                                       car_width, car_length, accel_min,
@@ -445,8 +446,9 @@ int main() {
 
               // Check if there is close frontal car and decide speed
               //--------//
-              dec_speed = cal_proper_speed(c_obj_s,
-                                          c_obj_d,
+              dec_speed = cal_proper_speed(c_obj_s_ori,
+                                          c_obj_d_ori,
+                                          c_obj_speed_ori,
                                           ref_s, ref_d, end_path_speed,
                                           (ref_vel_mph*mph2mps),
                                           car_width, car_length, accel_min,

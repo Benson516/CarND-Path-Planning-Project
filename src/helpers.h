@@ -330,11 +330,12 @@ double get_min_brake_distance(double ego_car_vel, double frontal_car_vel, double
 //-------------------------------------//
 double cal_proper_speed(const std::vector<double> &c_obj_s,
                         const std::vector<double> &c_obj_d,
+                        const std::vector<double> &c_obj_speed,
                         double ref_s, double ref_d, double current_speed,
                         double desired_speed,
                         double car_width, double car_length, double accel_min,
                         double safe_distance_margin,
-                        double safe_distance_factor_max, doubel safe_distance_factor_min,
+                        double safe_distance_factor_max, double safe_distance_factor_min,
                         bool verbose=false
                         )
 {
@@ -361,7 +362,7 @@ double cal_proper_speed(const std::vector<double> &c_obj_s,
         }
     }
     // Decide the set_vel for this action
-    action_id = 0;
+    int action_id = 0;
     /*
     0 - desired_speed
     1 - ACC
@@ -406,7 +407,7 @@ double cal_proper_speed(const std::vector<double> &c_obj_s,
                 break;
             case 3:
                 std::cout << "-----Speed up------" << std::endl;
-                break
+                break;
             default:
                 break;
         }
