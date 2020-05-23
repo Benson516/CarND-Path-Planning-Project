@@ -67,8 +67,8 @@ int main() {
   //---------------------//
   double T_sample = 0.02; // 20 ms, sampling period
   double lane_width = 4.0; // m
-  double car_width = 3.5; // 2.5; // m, 3.0 + 0.5 (margin)
-  double car_length = 7.0; // m, 5.0 + 2.0*2 (margin)
+  double car_width = 3.0; // m, 2.5 + 0.5 (margin)
+  double car_length = 6.0; // m, 5.0 + 1.0*2 (margin)
   //
   double delta_uncertainty_s = 2.0; // m/sec.
   double delta_uncertainty_d = 0.2; // m/sec.
@@ -339,10 +339,8 @@ int main() {
                       a_pos_d[i] += dT_sim * ( a_vel_magnitude[i] * sin(a_vel_angle[i]) );
                       // Check if the target lane reached
                       if (!a_is_lane_reached[i]){
-                          int current_lane = d_to_lane(ref_d, lane_width);
-                          double lane_center_d = lane_to_d(current_lane, lane_width);
-                          double offset = ref_d - lane_center_d;
-                          if ( fabs(a_pos_d[i] - ref_d) >= fabs(double(i-current_lane)*lane_width - offset) ){
+                          double lane_center_d = lane_to_d(i, lane_width);
+                          if ( fabs(a_pos_d[i] - ref_d) >= fabs(lane_center_d - ref_d) ){
                               a_is_lane_reached[i] = true;
                               // Go straigntly forward
                               a_vel_angle[i] = 0.0;
