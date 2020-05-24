@@ -73,9 +73,9 @@ int main() {
   double delta_uncertainty_s = 2.0; // m/sec.
   double delta_uncertainty_d = 0.2; // m/sec.
   //
-  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 80.0; // 49.5; // mph
-  double ref_vel_mph = 200; // 49.5; // mph
+  // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -83,6 +83,8 @@ int main() {
   double safe_distance_factor_max = 2.0;
   double safe_distance_factor_min = 1.1;
   double safe_distance_margin = 7.0; // m
+  //
+  double lane_change_target_distance = 30.0; // m
   //---------------------//
 
   // Variables
@@ -110,7 +112,7 @@ int main() {
                &g_fine_maps_s, &g_fine_maps_x, &g_fine_maps_y,
                &T_sample,&lane_width,&car_width,&car_length,&delta_uncertainty_s,&delta_uncertainty_d,
                &accel_max,&accel_min,
-               &safe_distance_factor_max,&safe_distance_factor_min,&safe_distance_margin,
+               &safe_distance_factor_max,&safe_distance_factor_min,&safe_distance_margin,&lane_change_target_distance,
                &ref_vel_mph,&lane,&set_vel,&dec_lane,&dec_speed,&filtered_delta_s_list]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
@@ -282,7 +284,7 @@ int main() {
               c_obj_speed_ori = c_obj_speed;
               //
               size_t N_lane = 3;
-              double target_s = ref_s + 30.0; // 30.0 m ahead
+              double target_s = ref_s + lane_change_target_distance; // m ahead
               // States of each action
               std::vector<double> a_pos_s(N_lane, ref_s);
               std::vector<double> a_pos_d(N_lane, ref_d);
@@ -593,7 +595,7 @@ int main() {
            //           --> so that the car will not run off center line of lane
            // Note: target_space defines the maximum distance for lane-changing
            //-------------------//
-           double target_space = 30.0; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
+           double target_space = lane_change_target_distance; // m, note: 25 m/s * 1.0 s = 25 m < 30 m
            double p_space = 10.0; // m
            //-------------------//
            for (size_t i=0; i < 3; ++i){
