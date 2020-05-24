@@ -73,9 +73,9 @@ int main() {
   double delta_uncertainty_s = 2.0; // m/sec.
   double delta_uncertainty_d = 0.2; // m/sec.
   //
-  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 80.0; // 49.5; // mph
-  // double ref_vel_mph = 200; // 49.5; // mph
+  double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -300,14 +300,14 @@ int main() {
                   double target_d_i = lane_to_d(i, lane_width);
                   double target_angle = atan2((target_d_i-a_pos_d[i]) , (target_s-a_pos_s[i]));
 
-                  // 30.0 degree
-                  if (target_angle > 0.52){
-                      target_angle = 0.52;
-                  }else if (target_angle < -0.52){
-                      target_angle = -0.52;
-                  }
-                  //
-                  
+                  // // 30.0 degree
+                  // if (target_angle > 0.52){
+                  //     target_angle = 0.52;
+                  // }else if (target_angle < -0.52){
+                  //     target_angle = -0.52;
+                  // }
+                  // //
+
                   a_vel_magnitude[i] = end_path_speed;
                   a_vel_angle[i] = target_angle;
                   a_set_vel[i] = set_vel; // Previous set_vel
