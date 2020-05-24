@@ -326,10 +326,10 @@ double get_delta_s(double s_1, double s_2, double s_per_round=6945.554){
         return (s_1 - s_2);
     }else{
         double delta_s = fmod( (s_1 - s_2), s_per_round);
-        // Corect the range to [-0.5*s_per_round, 0.5*s_per_round]
-        if ( delta_s > 0.5*s_per_round){
+        // Corect the range to [-0.8*s_per_round, 0.8*s_per_round]
+        if ( delta_s > 0.8*s_per_round){
             delta_s -= s_per_round;
-        }else if (delta_s < -0.5*s_per_round){
+        }else if (delta_s < -0.8*s_per_round){
             delta_s += s_per_round;
         }
         return delta_s;

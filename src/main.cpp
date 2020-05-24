@@ -73,9 +73,9 @@ int main() {
   double delta_uncertainty_s = 2.0; // m/sec.
   double delta_uncertainty_d = 0.2; // m/sec.
   //
-  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 80.0; // 49.5; // mph
-  double ref_vel_mph = 200; // 49.5; // mph
+  // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -246,8 +246,8 @@ int main() {
           // The following variables are the output of the decision-making module
           // dec_lane, dec_speed
           {
-              double T_sim_horizon = 10.0; // sec.
-              double dT_sim = 0.02; // sec. sample every dT_sim second
+              double T_sim_horizon = 40.0; // 10.0; // sec.
+              double dT_sim = 0.08; // 0.02; // sec. sample every dT_sim second
               // Other cars (for simulation and it original states)
               std::vector<double> c_obj_s, c_obj_s_ori;
               std::vector<double> c_obj_d, c_obj_d_ori;
@@ -420,16 +420,20 @@ int main() {
           }
 
           // Update targets
-          if ( (dec_lane-lane) > 0 ){
-              lane += 1; // Change one lane a time, no matter how far the lane we actually want
-          }else if ( (dec_lane-lane) < 0 ){
-              lane -= 1;
-          }// else keep as the previous one
-          // if (lane > 2){
-          //     lane = 2;
-          // }else if (lane < 0){
-          //     lane = 0;
-          // }
+          // Update lane only if the car is already close enough
+          int proposed_lane = lane;
+          if ( (dec_lane-proposed_lane) > 0 ){
+              proposed_lane += 1; // Change one lane a time, no matter how far the lane we actually want
+          }else if ( (dec_lane-proposed_lane) < 0 ){
+              proposed_lane -= 1;
+          }
+          // else keep as the previous one
+          double proposed_d = lane_to_d(proposed_lane, lane_width);
+          if (fabs(proposed_d - ref_d) <= 1.2*lane_width){
+              lane = proposed_lane;
+          }
+          // else keep as the previous one
+
           set_vel = dec_speed;
           //-----------//
 
