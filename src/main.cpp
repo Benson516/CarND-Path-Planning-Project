@@ -73,9 +73,9 @@ int main() {
   double delta_uncertainty_s = 2.0; // m/sec.
   double delta_uncertainty_d = 0.2; // m/sec.
   //
-  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 80.0; // 49.5; // mph
-  // double ref_vel_mph = 200; // 49.5; // mph
+  double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -153,14 +153,14 @@ int main() {
           std::cout << "-------------------------------" << std::endl;
 
 
-          // test, print sensor_fusion
-          for (size_t i=0; i < sensor_fusion.size(); ++i){
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
-              double check_speed = sqrt(vx*vx + vy*vy);
-              std::cout << "#" << i << "car's s = " << (double(sensor_fusion[i][5]) - car_s)
-              << "\tcar's v = " << check_speed << std::endl;
-          }
+          // // test, print sensor_fusion
+          // for (size_t i=0; i < sensor_fusion.size(); ++i){
+          //     double vx = sensor_fusion[i][3];
+          //     double vy = sensor_fusion[i][4];
+          //     double check_speed = sqrt(vx*vx + vy*vy);
+          //     std::cout << "#" << i << "car's s = " << (double(sensor_fusion[i][5]) - car_s)
+          //     << "\tcar's v = " << check_speed << std::endl;
+          // }
 
           //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
@@ -246,8 +246,15 @@ int main() {
           // The following variables are the output of the decision-making module
           // dec_lane, dec_speed
           {
-              double T_sim_horizon = 40.0; // 10.0; // sec.
-              double dT_sim = 0.08; // 0.02; // sec. sample every dT_sim second
+              double T_sim_horizon = 10.0; // sec.
+              double dT_sim = 0.02; // sec. sample every dT_sim second
+              //
+              // double T_rough_sim_1 = 10.0; // sec.
+              // double dT_rough_sim_1 = 0.04; // sec.
+              // //
+              // double T_rough_sim_2 = 20.0; // sec.
+              // double dT_rough_sim_2 = 0.1; // sec.
+
               // Other cars (for simulation and it original states)
               std::vector<double> c_obj_s, c_obj_s_ori;
               std::vector<double> c_obj_d, c_obj_d_ori;
@@ -299,6 +306,13 @@ int main() {
               std::vector<bool> a_is_collided(N_lane, false);
               // Loop forward time
               for (double _t = dT_sim; _t < T_sim_horizon; _t += dT_sim){
+                  // Fine sim. and rough sim.
+                  // if (_t >= T_rough_sim_2){
+                  //     dT_sim = dT_rough_sim_2;
+                  // }else if (_t >= T_rough_sim_1){
+                  //     dT_sim = dT_rough_sim_1;
+                  // }
+
                   // Move other cars forward one step in time
                   for (size_t k=0; k < c_obj_s.size(); ++k){
                       c_obj_s[k] += dT_sim * c_obj_speed[k];
@@ -351,16 +365,25 @@ int main() {
                       // Check collision
                       //-----------------------------//
                       for (size_t k=0; k < c_obj_s.size(); ++k){
-                          double dist_s = fabs(c_obj_s[k] - a_pos_s[i]); //  - _t*delta_uncertainty_s;
+                          // double dist_s = fabs(c_obj_s[k] - a_pos_s[i]); //  - _t*delta_uncertainty_s;
+                          double delta_s = get_delta_s(c_obj_s[k], a_pos_s[i]);
+                          double dist_s = fabs(delta_s);
                           double dist_d = fabs(c_obj_d[k] - a_pos_d[i]); //  - _t*delta_uncertainty_d;
-                          if ( dist_s <= car_length && dist_d <= car_width){
-                              a_is_collided[i] = true;
-                              break; // Save calculation time
-                          }else if ( (c_obj_s[k] <= a_pos_s[i]) && (c_obj_s[k] > a_pos_s[i] - (safe_distance_margin + car_length)) && dist_d <= car_width){
-                              // The rear car is not within the safe distance with ego car
-                              a_is_collided[i] = true;
-                              break; // Save calculation time
+                          // if ( dist_s <= car_length && dist_d <= car_width){
+                          //     a_is_collided[i] = true;
+                          //     break; // Save calculation time
+                          // }else if ( (c_obj_s[k] <= a_pos_s[i]) && (c_obj_s[k] > a_pos_s[i] - (safe_distance_margin + car_length)) && dist_d <= car_width){
+                          //     // The rear car is not within the safe distance with ego car
+                          //     a_is_collided[i] = true;
+                          //     break; // Save calculation time
+                          // }
+                          if (dist_d <= car_width){
+                              if ( ( delta_s <= (car_length) ) && ( -delta_s <= (safe_distance_margin + car_length) ) ){
+                                  a_is_collided[i] = true;
+                                  break; // Save calculation time
+                              }
                           }
+                          //
                       }
                       //-----------------------------//
                   }
