@@ -309,12 +309,32 @@ bool get_local_fine_map( double car_x, double car_y,
     return true;
 }
 
+
+//-----------------------//
 double lane_to_d(int lane, double lane_width){
     return lane_width*(double(lane) + 0.5);
 }
 
 int d_to_lane(double d, double lane_width){
     return int(floor(d/lane_width));
+}
+
+double get_delta_s(double s_1, double s_2, double s_per_round=6945.554){
+    // Return (s_1 - s_2)
+    // A round of the lap is defaultly being 6945.554 m
+    if (s_per_round < 0.0){
+        return (s_1 - s_2);
+    }else{
+        double delta_s = fmod( (s_1 - s_2), s_per_round);
+        // Corect the range to [-0.5*s_per_round, 0.5*s_per_round]
+        if ( delta_s > 0.5*s_per_round){
+            delta_s -= s_per_round;
+        }else if (delta_s < -0.5*s_per_round){
+            delta_s += s_per_round;
+        }
+        return delta_s;
+    }
+
 }
 
 double get_min_brake_distance(double ego_car_vel, double frontal_car_vel, double accel_min){
@@ -346,7 +366,8 @@ double cal_proper_speed(const std::vector<double> &c_obj_s,
     double frontal_car_s = 0.0;
     double frontal_car_vel = 0.0;
     for (size_t k=0; k < c_obj_s.size(); ++k){
-        double delta_s = c_obj_s[k] - ref_s;
+        // double delta_s = c_obj_s[k] - ref_s;
+        double delta_s = get_delta_s(c_obj_s[k], ref_s);
         if ( delta_s < 0.0 ){
             continue;
         }

@@ -371,7 +371,8 @@ int main() {
               double ds_max = 0.0;
 
               for (size_t i=0; i < N_lane; ++i){
-                  double delta_s_raw = (a_pos_s[i] - ref_s);
+                  // double delta_s_raw = (a_pos_s[i] - ref_s);
+                  double delta_s_raw = get_delta_s(a_pos_s[i], ref_s);
                   filtered_delta_s_list[i] += 0.1*(delta_s_raw - filtered_delta_s_list[i]);
                   double delta_s = delta_s_raw;
                   // double delta_s = filtered_delta_s_list[i];
