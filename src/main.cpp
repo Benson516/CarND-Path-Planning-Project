@@ -299,6 +299,15 @@ int main() {
               for (size_t i=0; i < N_lane; ++i){
                   double target_d_i = lane_to_d(i, lane_width);
                   double target_angle = atan2((target_d_i-a_pos_d[i]) , (target_s-a_pos_s[i]));
+
+                  // 30.0 degree
+                  if (target_angle > 0.52){
+                      target_angle = 0.52;
+                  }else if (target_angle < -0.52){
+                      target_angle = -0.52;
+                  }
+                  //
+                  
                   a_vel_magnitude[i] = end_path_speed;
                   a_vel_angle[i] = target_angle;
                   a_set_vel[i] = set_vel; // Previous set_vel
