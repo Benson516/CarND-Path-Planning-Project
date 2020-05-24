@@ -421,23 +421,56 @@ int main() {
 
           // Update targets
           // Update lane only if the car is already close enough
-          int proposed_lane = lane;
-          if ( (dec_lane-proposed_lane) > 0 ){
-              proposed_lane += 1; // Change one lane a time, no matter how far the lane we actually want
-          }else if ( (dec_lane-proposed_lane) < 0 ){
-              proposed_lane -= 1;
+
+
+          // Method 0
+          // if ( (dec_lane-lane) > 0 ){
+          //     lane += 1; // Change one lane a time, no matter how far the lane we actually want
+          // }else if ( (dec_lane-lane) < 0 ){
+          //     lane -= 1;
+          // }
+          // // else keep as the previous one
+
+          // Method 1
+          // double target_d = lane_to_d(lane, lane_width);
+          // if (fabs(target_d - ref_d) < 0.2*lane_width){
+          //     // Consider close enough to the original target, can change lane again
+          //     if ( (dec_lane-lane) > 0 ){
+          //         lane += 1; // Change one lane a time, no matter how far the lane we actually want
+          //     }else if ( (dec_lane-lane) < 0 ){
+          //         lane -= 1;
+          //     }
+          //     // else keep as the previous one
+          // }
+
+          // Method 2
+          int _current_lane = d_to_lane(ref_d, lane_width);
+          if ( (dec_lane-_current_lane) > 0 ){
+              lane = _current_lane + 1; // Change one lane a time, no matter how far the lane we actually want
+          }else if ( (dec_lane-_current_lane) < 0 ){
+              lane = _current_lane - 1;
+          }else{
+              lane = dec_lane; // The car is just at the dec_lane, set the target to dec_lane
           }
-          // else keep as the previous one
-          double proposed_d = lane_to_d(proposed_lane, lane_width);
-          if (fabs(proposed_d - ref_d) <= 1.2*lane_width){
-              lane = proposed_lane;
-          }
-          // else keep as the previous one
+
+          // Method 3
+          // int proposed_lane = lane;
+          // if ( (dec_lane-proposed_lane) > 0 ){
+          //     proposed_lane += 1; // Change one lane a time, no matter how far the lane we actually want
+          // }else if ( (dec_lane-proposed_lane) < 0 ){
+          //     proposed_lane -= 1;
+          // }
+          // // else keep as the previous one
+          // double proposed_d = lane_to_d(proposed_lane, lane_width);
+          // if (fabs(proposed_d - ref_d) <= 1.2*lane_width){
+          //     lane = proposed_lane;
+          // }
+          // // else keep as the previous one
 
           set_vel = dec_speed;
           //-----------//
 
-
+          std::cout << "dec_lane = " << dec_lane << std::endl;
           std::cout << "lane = " << lane << ", set_vel = " << set_vel*mps2mph << " mph" << std::endl;
 
           //---------------------------------//
