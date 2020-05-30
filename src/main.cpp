@@ -73,9 +73,9 @@ int main() {
   double delta_uncertainty_s = 2.0; // m/sec.
   double delta_uncertainty_d = 0.2; // m/sec.
   //
-  // double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
+  double ref_vel_mph = 49.5; // mph <-- This is the (maximum) speed we want to go by ourself
   // double ref_vel_mph = 80.0; // 49.5; // mph
-  double ref_vel_mph = 200; // 49.5; // mph
+  // double ref_vel_mph = 200; // 49.5; // mph
   //
   double accel_max = 5.0; // m/s^2
   double accel_min = -8.0; // m/s^2
@@ -85,6 +85,8 @@ int main() {
   double safe_distance_margin = 7.0; // m
   //
   double lane_change_target_distance = 30.0; // m
+  //
+  int keep_prev_size = 6;
   //---------------------//
 
   // Variables
@@ -113,7 +115,8 @@ int main() {
                &T_sample,&lane_width,&car_width,&car_length,&delta_uncertainty_s,&delta_uncertainty_d,
                &accel_max,&accel_min,
                &safe_distance_factor_max,&safe_distance_factor_min,&safe_distance_margin,&lane_change_target_distance,
-               &ref_vel_mph,&lane,&set_vel,&dec_lane,&dec_speed,&filtered_delta_s_list]
+               &ref_vel_mph,&lane,&set_vel,&dec_lane,&dec_speed,&filtered_delta_s_list,
+               &keep_prev_size]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -167,7 +170,7 @@ int main() {
           //---------------------------------------------------//
           // Get the size of previous_path (remained unexecuted way points)
           size_t prev_size = previous_path_x.size();
-          size_t keep_prev_size = 6;
+          // size_t keep_prev_size = 6; // Note: This has been replaced by a variable in main()
           if ( prev_size > keep_prev_size){
               prev_size = keep_prev_size;
           }
@@ -248,7 +251,7 @@ int main() {
           // The following variables are the output of the decision-making module
           // dec_lane, dec_speed
           {
-              double T_sim_horizon = 10.0; // sec.
+              double T_sim_horizon = 40; // 10.0; // sec.
               double dT_sim = 0.02; // sec. sample every dT_sim second
               //
               // double T_rough_sim_1 = 10.0; // sec.
