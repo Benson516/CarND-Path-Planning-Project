@@ -4,12 +4,13 @@ Self-Driving Car Engineer Nanodegree Program
 
 [//]: # (Image References)
 
-[image0]: ./pictures/architecture.png "architecture"
+[image0]: ./pictures/architecture.png "processing flow"
 [image1]: ./pictures/trajectory_generation.png "trajectory generation"
 [image2]: ./pictures/speed_schedualing.png "speed schedualing"
 [image3]: ./pictures/behavior_planning.png "behavior planning"
 
-# Introduvtion
+# Introduction
+
 The target of the project is to generate paths (way-points) for a simulated car to drive as fast as possible without violating the following constraints:
 - Maximum speed of 50 mph
 - No collision with other cars on the road
@@ -22,7 +23,7 @@ The prior knowledge the program got are the following
 - The runway is circular with circumference of 6945.554 m 
 - Totally 3 lanes (Fixed)
 
-During the running time, the program received the following signals 
+During the run time, the program received the following signals 
 - Sensor fusion data, including other cars’ position and velocity 
 - Ego vehicle’s latest position and velocity
 - Remained path waypoints that haven’t been used
@@ -30,9 +31,17 @@ During the running time, the program received the following signals
 
 # Architecture
 
+There are two main block of function in the process
+- Behavior planning (`code line #246 ~ #513 in main.cpp`)
+- Path planning (`code line #576 ~ #682 in main.cpp`)
+
+The behavior planner receives the sensor fusion data at each time step/iteration, performs the optimization process, and output the target lane (`lane`) and target speed (`set_vel`). After deciding the target lane and speed, the path planner will try to fill up the gap between the last generated path and the target lane (`lane`) using spline and sample the waypoints according to the speed at each step, where the speed at each step will slightly increase/derease toward the desired speed (`set_vel`).
+
+
+
 ![alt text][image0]
 
-Fig. 1 Architecture of the path-planning program
+Fig. 1 Processing flow of the path-planning program
 
 ## Path Planning 
 
