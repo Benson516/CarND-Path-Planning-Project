@@ -83,6 +83,9 @@ Fig. 2 Trajectory generation using spline
 
 ### Speed Scheduling
 
+The final product of the program is a list of points with the coordinate of each point describes the position of the car at the corresponding step and the distance between pair of neighbor points is the speed within the two steps.
+
+With the parametrized expression of the curve (spline) obtained from the previous procedure, the last task of the program is to sample the mentioned points from the given trajectory. 
 
 
 
