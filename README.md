@@ -55,6 +55,11 @@ Fig. 4 Behavior planning through forward simulation
 # Simulation Result
 
 
+Here's a [link to the result video.](https://youtu.be/yQ6OSxGZ7JA)
+
+[![Alternate Text](http://img.youtube.com/vi/yQ6OSxGZ7JA/0.jpg)](https://youtu.be/yQ6OSxGZ7JA)
+
+
 
 ---   
 ### Simulator.
