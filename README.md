@@ -53,7 +53,26 @@ The path plannning block can be sub-devided into two parts
 
 ### Trajectory Generation
 
+The target of the trajectory generation is to generate a smooth trajectory (`spline`) according to the desired lane and given map waypoints. The standard procedure is listed below
+1. Decide a reference point to start the new path (usually the last point of the previous path)
+1. Chose last 2 points from the previous path and 3 points on desired lane (may be different lane as the one the first 2 points at) that is 30m, 60m, and 90m ahead the reference point (in Frenet-s) as anchor points.
+1. Convert the anchor points from Frenet coordiante** to Global Cartesian coordinate (using `getXY()` at `#131~#177` in `helpers.h`, given _map waypoints_)
+1. Transform all the anchor points to _local coordinate_ with respect to reference point and reference angle (to simplify the speed scheduling process)
+1. Use 5 anchor points, in local coordinate, to generate the spline
 
+
+However, the map waypoints are quit sparse that it's not sufficient to calculate the correct transformation between Frenet and Cartesian coordinate (i.e. `getXY()` at `#131~#177` in `helpers.h` does not generate precise (x,y) from (s,d) with original map waypoints). The result of this is a trajectory that sometimes biased from the center line of the lane if we use the erronic transformed (x,y) points as anchore points to generate the spline. Nevertheless, this problem can be solved by pre-generating the local fine map waypoints. Therefore, the final version of the trajectory generation process is 
+
+1. Decide a reference point to start the new path (usually the last point of the previous path)
+1. Chose last 2 points from the previous path and 3 points on desired lane (may be different lane as the one the first 2 points at) that is 30m, 60m, and 90m ahead the reference point (in Frenet-s) as anchor points.
+1. ***Generate **local fine map waypoints** using splin, with original map waypoints as anchor points (`get_local_fine_map()` at at `#234~#310` in `helpers.h`)***
+1. Convert the anchor points from **Frenet coordiante** to **Global Cartesian coordinate** (using `getXY()` at `#131~#177` in `helpers.h`, given **local fine map waypoints**)
+1. Transform all the anchor points to _local coordinate_ with respect to reference point and reference angle (to simplify the speed scheduling process)
+1. Use 5 anchor points, in local coordinate, to generate the spline
+
+
+
+Fig. 2 illustrates the process of trajectory generation.
 
 
 
