@@ -83,9 +83,18 @@ Fig. 2 Trajectory generation using spline
 
 ### Speed Scheduling
 
-The final product of the program is a list of points with the coordinate of each point describes the position of the car at the corresponding step and the distance between pair of neighbor points is the speed within the two steps.
+The final product of the whole path-planning program is a list of points with that the coordinate of each point describes the position of the car at the corresponding time step and the distance between each pair of neighbor points is the speed within the two corresponding steps.
 
-With the parametrized expression of the curve (spline) obtained from the previous procedure, the last task of the program is to sample the mentioned points from the given trajectory. 
+With the parametrized expression of the curve (spline) obtained by the previous procedure, the last task in the program is to sample the mentioned points from the given trajectory. The following step generate the desired list of points with approximated speed profile.
+
+
+
+1. Chose a target x (e.g. 30 m forward)
+1. Calculate the target y using the trajectory obtained from previous step (the spline, `y=s(x)`)
+1. Calculate 𝜃_𝑑𝑒𝑝𝑎𝑟𝑡
+1. According to the set_vel and acce_max/acce_min, slightly change the current speed at each iteration
+1. At each iteration, project the increment into 𝑥_𝑙𝑜𝑐𝑎𝑙 and generate the y value of the waypoint using spline  
+
 
 
 
