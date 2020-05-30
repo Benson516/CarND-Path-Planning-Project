@@ -310,4 +310,132 @@ bool get_local_fine_map( double car_x, double car_y,
 }
 
 
+//-----------------------//
+double lane_to_d(int lane, double lane_width){
+    return lane_width*(double(lane) + 0.5);
+}
+
+int d_to_lane(double d, double lane_width){
+    return int(floor(d/lane_width));
+}
+
+double get_delta_s(double s_1, double s_2, double s_per_round=6945.554){
+    // Return (s_1 - s_2)
+    // A round of the lap is defaultly being 6945.554 m
+    if (s_per_round < 0.0){
+        return (s_1 - s_2);
+    }else{
+        double delta_s = fmod( (s_1 - s_2), s_per_round);
+        // Corect the range to [-0.8*s_per_round, 0.8*s_per_round]
+        if ( delta_s > 0.8*s_per_round){
+            delta_s -= s_per_round;
+        }else if (delta_s < -0.8*s_per_round){
+            delta_s += s_per_round;
+        }
+        return delta_s;
+    }
+
+}
+
+double get_min_brake_distance(double ego_car_vel, double frontal_car_vel, double accel_min){
+    if (frontal_car_vel > ego_car_vel){
+        return -1.0;
+    }
+    double delta_speed = ego_car_vel - frontal_car_vel;
+    double delta_t = delta_speed/fabs(accel_min);
+    return (0.5*delta_speed*delta_t);
+}
+
+
+//-------------------------------------//
+double cal_proper_speed(const std::vector<double> &c_obj_s,
+                        const std::vector<double> &c_obj_d,
+                        const std::vector<double> &c_obj_speed,
+                        double ref_s, double ref_d, double current_speed,
+                        double desired_speed,
+                        double car_width, double car_length, double accel_min,
+                        double safe_distance_margin,
+                        double safe_distance_factor_max, double safe_distance_factor_min,
+                        bool verbose=false
+                        )
+{
+    //
+    double set_vel = 0.0;
+    //
+    int frontal_car_id = -1;
+    double frontal_car_s = 0.0;
+    double frontal_car_vel = 0.0;
+    for (size_t k=0; k < c_obj_s.size(); ++k){
+        // double delta_s = c_obj_s[k] - ref_s;
+        double delta_s = get_delta_s(c_obj_s[k], ref_s);
+        if ( delta_s < 0.0 ){
+            continue;
+        }
+        double dist_d = fabs(c_obj_d[k] - ref_d);
+        if ( dist_d >= car_width){
+            continue;
+        }
+        //
+        if ( delta_s < frontal_car_s || frontal_car_id < 0){
+            frontal_car_s = delta_s;
+            frontal_car_id = k;
+            frontal_car_vel = c_obj_speed[k];
+        }
+    }
+    // Decide the set_vel for this action
+    int action_id = 0;
+    /*
+    0 - desired_speed
+    1 - ACC
+    2 - Brake to 0
+    3 - Speed up
+    */
+    if (frontal_car_id >= 0){
+        double min_brake_distance = get_min_brake_distance(current_speed, frontal_car_vel, accel_min);
+        if ( min_brake_distance < 0.0 || (frontal_car_s-car_length-safe_distance_margin) > safe_distance_factor_max*min_brake_distance){
+            // Frontal car goes at higer speed than we do,
+            // Or we still have some room to get closer
+            // just go at maximum speed
+            set_vel = desired_speed;
+            action_id = 3;
+        }else if ((frontal_car_s-car_length-safe_distance_margin) > safe_distance_factor_min*min_brake_distance){
+            // There is a frontal car which is too close, slow down
+            set_vel = frontal_car_vel;
+            action_id = 1;
+        }else{
+            // Too close, keep slowing down
+            set_vel = 0.0;
+            action_id = 2;
+        }
+
+    }else{
+        // No frontal car, go at maximum speed
+        set_vel = desired_speed;
+        action_id = 0;
+    }
+
+    // logs
+    if (verbose){
+        switch (action_id){
+            case 0:
+                std::cout << "-----Max speed-----" << std::endl;
+                break;
+            case 1:
+                std::cout << "--------ACC--------" << std::endl;
+                break;
+            case 2:
+                std::cout << "--------STOP-------" << std::endl;
+                break;
+            case 3:
+                std::cout << "-----Speed up------" << std::endl;
+                break;
+            default:
+                break;
+        }
+    }
+    //
+    return set_vel;
+}
+
+
 #endif  // HELPERS_H
