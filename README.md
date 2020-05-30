@@ -2,6 +2,13 @@
 Self-Driving Car Engineer Nanodegree Program
 ---
 
+[//]: # (Image References)
+
+[image0]: ./pictures/architecture.png "architecture"
+[image1]: ./pictures/trajectory_generation.png "trajectory generation"
+[image2]: ./pictures/speed_schedualing.png "speed schedualing"
+[image3]: ./pictures/behavior_planning.png "behavior planning"
+
 # Introduvtion
 The target of the project is to generate paths (way-points) for a simulated car to drive as fast as possible without violating the following constraints:
 - Maximum speed of 50 mph
@@ -23,10 +30,30 @@ During the running time, the program received the following signals
 
 # Architecture
 
+![alt text][image0]
+
+Fig. 1 Architecture of the path-planning program
 
 ## Path Planning 
 
+
+![alt text][image1]
+
+Fig. 2 Trajectory generation using spline
+
+![alt text][image2]
+
+Fig. 3 Speed scheduling and path waypoint generation
+
 ## Behavior Planning
+
+![alt text][image3]
+
+Fig. 4 Behavior planning through forward simulation
+
+
+# Simulation Result
+
 
 
 ---   
