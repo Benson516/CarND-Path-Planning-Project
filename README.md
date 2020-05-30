@@ -37,13 +37,19 @@ There are two main block of function in the process
 
 The behavior planner receives the sensor fusion data at each time step/iteration, performs the optimization process, and output the target lane (`lane`) and target speed (`set_vel`). After deciding the target lane and speed, the path planner will try to fill up the gap between the last generated path and the target lane (`lane`) using spline and sample the waypoints according to the speed at each step, where the speed at each step will slightly increase/derease toward the desired speed (`set_vel`).
 
-
-
 ![alt text][image0]
 
 Fig. 1 Processing flow of the path-planning program
 
+The following sections will describe the two block separately. 
+
+
+
 ## Path Planning 
+
+The path plannning block can be sub-devided into two parts
+- Trajectory generation (`code line #576 ~ #635 in main.cpp`)
+- Speed scheduling (`code line #644 ~ #682 in main.cpp`)
 
 
 ![alt text][image1]
@@ -63,10 +69,36 @@ Fig. 4 Behavior planning through forward simulation
 
 # Simulation Result
 
+## Normal Drive (Satisfy all the constraints required)
 
-Here's a [link to the result video.](https://youtu.be/yQ6OSxGZ7JA)
+Here's the [link to the video (49.5 mph).](https://youtu.be/yQ6OSxGZ7JA)
 
-[![Alternate Text](http://img.youtube.com/vi/yQ6OSxGZ7JA/0.jpg)](https://youtu.be/yQ6OSxGZ7JA)
+[![video - 49.5 mph](http://img.youtube.com/vi/yQ6OSxGZ7JA/0.jpg)](https://youtu.be/yQ6OSxGZ7JA)
+
+
+The simulation result shows the planners behave well that it did not violate any of the constraints.
+
+The ego car spend **5 minutes and 25 seconds** to travel a round (_4.32 miles_), which resulted in an average speed of **47.85 mph**. This shows that the car chose the lane to drive wisely so that it did not need to slow down to avoid crashing into the frontal cars.
+
+In addition, the car also shows some intelligence during the drive.
+- Smooth lane changing without slowing down (`0:25 49.5mph video`)
+- Change lane early even when the frontal car is way distant from it (`3:33 49.5mph video`)
+- Double lane changing, e.g. 02 or 2  0 (`2:16 in 49.5mph video`)
+
+
+
+
+## High-speed Drive (Break the speed limit with top speed of 200 mph)
+
+In order to test the limit of the planners, the following experiment is also conducted to run drive the ego vehicle at the top speed of 200 mph. 
+
+Here's the [link to the video (200 mph).](https://youtu.be/HW9u6UjKj7I)
+
+[![video - 200 mph](http://img.youtube.com/vi/HW9u6UjKj7I/0.jpg)](https://youtu.be/HW9u6UjKj7I)
+
+
+The result is quit interesting when the car changed to the lane that ultimatly resulting in smoother drive even there is no frontal car right in front of it (`1:54 in 200mph video`).
+
 
 
 
