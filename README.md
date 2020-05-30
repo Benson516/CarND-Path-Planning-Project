@@ -105,8 +105,13 @@ Fig. 3 Speed scheduling and path waypoint generation
 
 ## Behavior Planning
 
+The behavior planning desired the optimal action (to chose a lane and speed) at each iteration. For the planner in this project, the action space is restricted to simply chose between three lane (i.e. |a|=3), the desired speed is determined solely according to that if there was close frontal car or not (using `cal_proper_speed()` at `#351~#438` in `helpers.h`). The optimality of the planner is set to find the longest traveling distance at a fixed time horizon, and the feasibility is defineh into other cars.
 
+The planning algorithm implemented here (`code line #246 ~ #513 in main.cpp`) is a **depth-1 uninformed searching algorithm** with early stoping. The searching method is performed by simulating the ego car (`code line #345 ~ #376 in main.cpp`) and other cars (`code line #330 ~ #333 in main.cpp`) forward in time for each chosen lane. The ego car in simulation will run toward the chosen lane and then stay on that lane (`code line #366 ~ #376 in main.cpp`). If there was a close frontal car, the simulation car will use the same strategy as the real decision used (using `cal_proper_speed()` at `#351~#438` in `helpers.h`) to slow down (`code line #345 ~ #363 in main.h`). If a chosen action resulted in a collision before reaching the simulation time horizon, the simulation will stop for that action. 
 
+The final decision of desired lane is of that the lane resulted in longest travel distance one (`code line #406 ~ #429 in main.cpp`). Since the early stopping of the simulation, the action resulted in collision natually produce shorter traveling lenth, the checking of collision is not neccessary.
+
+One minor step left is a filter that limit the ego car to shift only one lane at a time (`code line #483 ~ #491 in main.cpp`), so that the car won't do something acrobatic/non-proper movements.
 
 
 ![alt text][image3]
