@@ -51,10 +51,22 @@ The path plannning block can be sub-devided into two parts
 - Trajectory generation (`code line #576 ~ #635 in main.cpp`)
 - Speed scheduling (`code line #644 ~ #682 in main.cpp`)
 
+### Trajectory Generation
+
+
+
+
 
 ![alt text][image1]
 
 Fig. 2 Trajectory generation using spline
+
+
+### Speed Scheduling
+
+
+
+
 
 ![alt text][image2]
 
@@ -62,9 +74,15 @@ Fig. 3 Speed scheduling and path waypoint generation
 
 ## Behavior Planning
 
+
+
+
+
 ![alt text][image3]
 
 Fig. 4 Behavior planning through forward simulation
+
+
 
 
 # Simulation Result
@@ -103,6 +121,9 @@ The result is quit interesting when the car changed to the lane that ultimatly r
 
 
 ---   
+# CarND-Path-Planning-Project
+Self-Driving Car Engineer Nanodegree Program
+
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).  
 
