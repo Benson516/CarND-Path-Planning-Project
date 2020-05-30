@@ -1,6 +1,35 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-   
+---
+
+# Introduvtion
+The target of the project is to generate paths (way-points) for a simulated car to drive as fast as possible without violating the following constraints:
+- Maximum speed of 50 mph
+- No collision with other cars on the road
+- Stay in lane, except the 3 sec. tolerance for lane changing
+- Maximum absolute value for acceleration of 10 𝑚/𝑠^2
+- Maximum jerk of 10 𝑚/𝑠^3
+
+The prior knowledge the program got are the following
+- Map way points (coarse)
+- The runway is circular with circumference of 6945.554 m 
+- Totally 3 lanes (Fixed)
+
+During the running time, the program received the following signals 
+- Sensor fusion data, including other cars’ position and velocity 
+- Ego vehicle’s latest position and velocity
+- Remained path waypoints that haven’t been used
+
+
+# Architecture
+
+
+## Path Planning 
+
+## Behavior Planning
+
+
+---   
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).  
 
